@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  lcy_dev:
+    image: huggingface/transformers-no-delete
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    ports:
+      - "10086:22"
+    volumes:
+      - /mnt/nfs/lcy/.cache:/root/.cache
+      - /mnt/nfs/lcy/research:/root/research
+    tty: true
+    stdin_open: true
+    restart: always
+
+#  docker compose -f ./docker-compose.yml up -d 

@@ -1,0 +1,53 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore log files
+*.log
+
+# Ignore build directories
+dist/
+build/
+
+# Ignore environment variable files
+.env
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+*.iml
+
+# Ignore compiled files
+*.class
+*.o
+*.so
+*.dll
+*.exe
+
+# Ignore coverage reports
+coverage/
+.nyc_output/
+
+# Ignore temporary files
+*.tmp
+*.swp
+*.bak
+*.orig
+
+output
+wandb
+
+**/__pycache__
+*pytest*
+*jpg
+*bmp
+*.pdf
+*.excel
+*.ppt
+*.word
+data
+# docker-compose.yml
+save
