@@ -1,7 +1,7 @@
 from typing import TypedDict
 from torch.utils.data import Dataset
 import torch
-import torchvision
+from torchvision import transforms
 
 
 class VisualDict(TypedDict):
@@ -20,14 +20,16 @@ class AttackDict(TypedDict):
     label_ids_trigger: torch.Tensor
 
 
-def load_dataset(name, path=None, split="val", transform=None):
+def load_dataset(name, transform=None, *, path=None, split="val"):
     if path is None:
+
         path = f"./data/{name}"
+    # Preprocess the image to 299x299
     if transform is None:
-        transform = torchvision.transforms.Compose(
+        transform = transforms.Compose(
             [
-                torchvision.transforms.Resize((299, 299)),
-                torchvision.transforms.ToTensor(),
+                transforms.Resize((299, 299)),
+                transforms.ToTensor(),
             ]
         )
     if name.lower() == "vqa":

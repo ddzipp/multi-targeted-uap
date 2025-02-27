@@ -4,7 +4,7 @@ import torchvision
 
 from attacks.base import Attacker
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3,4"
 import torch
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -26,7 +26,7 @@ def main():
     # init logger
     # run = WBLogger(project="multi-targeted-test", config=cfg).run
     # initialize attack
-    attacker = Attacker(processor)
+    attacker = Attacker(model, processor)
 
     # init perturbation, constraint and optimizer
     perturbation = torch.rand_like(dataset[0]["image"])
@@ -38,13 +38,10 @@ def main():
 
     for _ in pbar:
         item = dataset[0]
-        optimizer.zero_grad()
         image, question, answer = item["image"], item["question"], item["answer"]
         perturbed_image = constraint(image, perturbation)
-        inputs, label_ids = attacker.generate_inputs(
-            perturbed_image, question, "TARGET!"
-        )
-        loss = model(**inputs, labels=label_ids).loss
+        optimizer.zero_grad()
+        loss = attacker.calc_loss(perturbed_image, label=1)
         loss.backward()
         optimizer.step()
         print(loss)

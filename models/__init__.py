@@ -20,11 +20,6 @@ def get_model(model_name, *args, **kwargs):
     else:
         import timm
 
-        timm_model_hub = timm.list_models(pretrained=True)
-        if model_name not in timm_model_hub:
-            raise ValueError(
-                f"Not supported model {model_name}. Choose model from {model_hub + timm_model_hub}"
-            )
         model = timm.create_model(model_name, pretrained=True).eval()
         data_cfg = timm.data.resolve_data_config(model.pretrained_cfg)
         transform = timm.data.create_transform(**data_cfg)

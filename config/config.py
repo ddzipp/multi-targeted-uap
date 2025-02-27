@@ -13,13 +13,13 @@ class Config:
     """
 
     # dataset info
-    dataset_name: str = "Cropa"
+    dataset_name: str = "ImageNet"
 
     # model info
-    model_name: str = "llava"
+    model_name: str = "resnet50"
 
     # attack info
-    optimizer: str = "Momentum"
+    optimizer: str = "momentum"
     mu: float = 0.9
     epoch: int = 500
     lr: float = 5 / epoch

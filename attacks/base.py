@@ -1,19 +1,32 @@
+from torchvision import transforms
 import torch
+from models import model_hub
 
 
 class Attacker:
 
-    def __init__(
-        self,
-        processor,
-    ):
+    def __init__(self, model, processor, target=None):
         super().__init__()
+        self.model = model
         self.processor = processor
+        self.target = target
+        self.loss_fn = torch.nn.CrossEntropyLoss()
 
-        self.eos_token = self.processor.tokenizer.eos_token
-        self.colon_ids = processor.tokenizer.encode(
-            "Assistant:", add_special_tokens=False
-        )[-1]
+        if self.processor.__class__.__module__.startswith("torchvision"):
+            # remove ToTensor from processor, as the image have been tensorized
+            self.processor = transforms.Compose(
+                [
+                    t
+                    for t in self.processor.transforms
+                    if not isinstance(t, transforms.ToTensor)
+                ]
+            )
+        else:
+            # Set eos_token and colon_ids for VLM model
+            self.eos_token = self.processor.tokenizer.eos_token
+            self.colon_ids = processor.tokenizer.encode(
+                "Assistant:", add_special_tokens=False
+            )[-1]
 
     def generate_inputs(self, image, question, answer, generation=False):
         if question is None:
@@ -46,3 +59,17 @@ class Attacker:
         label_ids[0, : torch.where(label_ids == self.colon_ids)[-1][-1] + 1] = -100
 
         return inputs, label_ids
+
+    def calc_loss(self, image, question=None, *, answer=None, label=None):
+        # calc loss for vlm model and DNN model
+        if self.model.__class__.__name__ in model_hub:
+            # VLM model
+            assert question is not None, "Question must be provided for VLM model"
+            inputs, label_ids = self.generate_inputs(image, question, answer)
+            loss = self.model(**inputs, labels=label_ids).loss
+        else:
+            # DNN model
+            processed_image = self.processor(image).unsqueeze(0)
+            logits = self.model(processed_image)
+            loss = self.loss_fn(logits, target=torch.tensor([int(label)]))
+        return loss
