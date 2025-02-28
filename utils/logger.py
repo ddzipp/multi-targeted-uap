@@ -32,3 +32,18 @@ class WBLogger:
 
     def __del__(self):
         self._safe_finish()
+
+
+class NullLogger:
+    """
+    A class that does nothing when called or when an attribute is accessed.
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        pass
+
+    def __getattr__(self, name):
+        return self.__class__()

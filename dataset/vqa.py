@@ -4,7 +4,7 @@ import os
 from PIL import Image
 from torch.utils.data import Dataset
 
-from dataset.base import VisualDict
+from dataset.base import VisionData
 
 
 class VQADataset(Dataset):
@@ -38,7 +38,7 @@ class VQADataset(Dataset):
             self.image_path, f"COCO_{self.split}2014_{question['image_id']:012d}.jpg"
         )
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> VisionData:
         question = self.questions[idx]
         answers = self.answers[idx]
         img_path = self.get_img_path(question)
@@ -47,7 +47,7 @@ class VQADataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        response = VisualDict(
+        response = VisionData(
             image=image,
             question=question["question"],
             answer=answers["answers"][0]["answer"],

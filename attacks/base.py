@@ -6,11 +6,10 @@ from models import model_hub
 
 class Attacker:
 
-    def __init__(self, model, processor, target=None):
+    def __init__(self, model, processor):
         super().__init__()
         self.model = model
         self.processor = processor
-        self.target = target
         self.loss_fn = torch.nn.CrossEntropyLoss()
 
         if self.processor.__class__.__module__.startswith("torchvision"):
@@ -70,7 +69,8 @@ class Attacker:
             loss = self.model(**inputs, labels=label_ids).loss
         else:
             # DNN model
-            processed_image = self.processor(image).unsqueeze(0)
+            processed_image = self.processor(image).unsqueeze(0).cuda()
             logits = self.model(processed_image)
-            loss = self.loss_fn(logits, target=torch.tensor([int(label)]))
+            target = torch.tensor([int(label)]).cuda()
+            loss = self.loss_fn(logits, target)
         return loss

@@ -8,7 +8,7 @@ docker pull huggingface/transformers-pytorch-gpu:4.41.3
 ### Conda/pip
 Refer to requirements.txt for the required packages.
 
-# Code Style
+# Code Style and Quality
 Code style follows PEP8 standards with Black formatting, Mypy type checks, and isort sorted imports.
 Use the following commands in the project direcotry to check the format.
 ```bash

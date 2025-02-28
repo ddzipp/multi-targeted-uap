@@ -20,7 +20,7 @@ def get_model(model_name, *args, **kwargs):
         model = model_hub[model_name.lower()](*args, **kwargs)
         return model.model, model.processor
 
-    model = timm.create_model(model_name, pretrained=True).eval()
+    model = timm.create_model(model_name, pretrained=True).cuda().eval()
     data_cfg = timm.data.resolve_data_config(model.pretrained_cfg)
     transform = timm.data.create_transform(**data_cfg)
     return model, transform
