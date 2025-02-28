@@ -1,5 +1,7 @@
 import torch
 from PIL.Image import Image
+from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
+
 from models.base import RegisterModel, VisualLanguageModel
 
 
@@ -8,7 +10,6 @@ class Qwen(VisualLanguageModel):
     model_id = "Qwen/Qwen2-VL-2B-Instruct"
 
     def __init__(self, device="auto", torch_dtype="float16"):
-        from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
 
         self._model = Qwen2VLForConditionalGeneration.from_pretrained(
             self.model_id, device_map=device, torch_dtype=torch_dtype

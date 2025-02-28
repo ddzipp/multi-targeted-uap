@@ -1,3 +1,10 @@
+from transformers import (
+    Blip2ForConditionalGeneration,
+    Blip2Processor,
+    InstructBlipForConditionalGeneration,
+    InstructBlipProcessor,
+)
+
 from models.base import RegisterModel, VisualLanguageModel
 
 
@@ -23,8 +30,6 @@ class Blip2(VisualLanguageModel):
         output = model (.generate)(input_ids=input_ids["input_ids"], pixel_values=pixel_values, attention_mask=input_ids["attention_mask"])
         processor.batch_decode(output.logits[:, -1, :].argmax(-1), skip_special_tokens=True)
         """
-
-        from transformers import Blip2Processor, Blip2ForConditionalGeneration
 
         self.device = device
         self._model = Blip2ForConditionalGeneration.from_pretrained(
@@ -74,10 +79,6 @@ class InstructBlip2(VisualLanguageModel):
     model_id = "Salesforce/instructblip-vicuna-7b"
 
     def __init__(self, device="auto", torch_dtype="float16"):
-        from transformers import (
-            InstructBlipProcessor,
-            InstructBlipForConditionalGeneration,
-        )
 
         self.device = device
         self._model = InstructBlipForConditionalGeneration.from_pretrained(

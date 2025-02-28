@@ -1,3 +1,10 @@
+from transformers import (
+    AutoProcessor,
+    LlavaForConditionalGeneration,
+    LlavaNextForConditionalGeneration,
+    LlavaNextProcessor,
+)
+
 from models.base import RegisterModel, VisualLanguageModel
 
 
@@ -13,8 +20,6 @@ class LLava(VisualLanguageModel):
         output = model (.generate)(input_ids=input_ids["input_ids"], pixel_values=pixel_values, attention_mask=input_ids["attention_mask"])
         processor.batch_decode(output.logits[:, -1, :].argmax(-1), skip_special_tokens=True)
         """
-
-        from transformers import LlavaForConditionalGeneration, AutoProcessor
 
         self.device = device
         self._model = LlavaForConditionalGeneration.from_pretrained(
@@ -47,10 +52,9 @@ class LLavaNext(VisualLanguageModel):
 
     """
 
-    model_id = f"llava-hf/llava-v1.6-mistral-7b-hf"
+    model_id = "llava-hf/llava-v1.6-mistral-7b-hf"
 
     def __init__(self, device="auto", torch_dtype="float16"):
-        from transformers import LlavaNextProcessor, LlavaNextForConditionalGeneration
 
         self.device = device
         self._model = LlavaNextForConditionalGeneration.from_pretrained(

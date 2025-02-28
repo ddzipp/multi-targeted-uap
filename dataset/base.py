@@ -1,7 +1,11 @@
 from typing import TypedDict
-from torch.utils.data import Dataset
+
 import torch
 from torchvision import transforms
+
+from dataset.cropa import CropaDataset
+from dataset.imagenet import ImageNetDataset
+from dataset.vqa import VQADataset
 
 
 class VisualDict(TypedDict):
@@ -33,15 +37,12 @@ def load_dataset(name, transform=None, *, path=None, split="val"):
             ]
         )
     if name.lower() == "vqa":
-        from dataset.vqa import VQADataset
 
         return VQADataset(path=path, split=split, transform=transform)
     elif name.lower() == "imagenet":
-        from dataset.imagenet import ImageNetDataset
 
         return ImageNetDataset(path=path, split=split, transform=transform)
     elif name.lower() == "cropa":
-        from dataset.cropa import CropaDataset
 
         return CropaDataset(path=path, split=split, transform=transform)
     else:

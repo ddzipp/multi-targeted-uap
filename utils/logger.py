@@ -1,5 +1,6 @@
-import wandb
 import atexit
+
+import wandb
 
 
 class WBLogger:

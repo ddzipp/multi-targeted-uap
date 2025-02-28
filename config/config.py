@@ -1,7 +1,7 @@
-from dataclasses import dataclass, asdict
-import yaml
-import os
 import argparse
+from dataclasses import asdict, dataclass
+
+import yaml
 
 
 @dataclass
@@ -55,7 +55,7 @@ class Config:
     def read_config_file(self, file_path=None):
         if file_path is None:
             return
-        with open(file_path, "r") as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             cfg_file = yaml.safe_load(file)
         # update config with config file
         for key, value in cfg_file.items():

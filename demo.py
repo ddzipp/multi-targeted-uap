@@ -1,20 +1,18 @@
 import os
 
-import torchvision
-
-from attacks.base import Attacker
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3,4"
-import torch
 import matplotlib.pyplot as plt
+import torch
 from tqdm import tqdm
 
+from attacks.base import Attacker
+from config.config import Config
+from dataset.base import load_dataset
+from models import get_model
+from utils.constraint import Constraint
 from utils.logger import WBLogger
 from utils.optimizer import Optimizer
-from utils.constraint import Constraint
-from config.config import Config
-from models import get_model
-from dataset.base import load_dataset
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3,4"
 
 
 def main():

@@ -4,7 +4,6 @@ from typing import TypeVar
 
 import torch
 
-
 T = TypeVar("T", bound=torch.Tensor)
 
 
@@ -22,7 +21,9 @@ class Distance(ABC):
     def __call__(self, reference: T, perturbed: T) -> T: ...
 
     @abstractmethod
-    def clip_perturbation(self, references: T, perturbed: T, epsilon: float) -> T: ...
+    def clip_perturbation(
+        self, perturbed: T, *, epsilon: float, references: T | None
+    ) -> T: ...
 
     @abstractmethod
     def normalize(self, x: T) -> T: ...
@@ -61,15 +62,15 @@ class LpDistance(Distance):
         Returns:
             A 1D tensor with the distances from references to perturbed.
         """
-        norms = torch.linalg.vector_norm(
+        norms = torch.norm(
             flatten(perturbed - references),
-            self.p,
+            p=self.p,
             dim=-1,
         )
         return norms
 
     def clip_perturbation(
-        self, perturbed: T, *, epsilon: float, references: T = None
+        self, perturbed: T, *, epsilon: float, references: T | None = None
     ) -> T:
         """Clips the perturbations to epsilon and returns the new perturbed
 
@@ -99,7 +100,7 @@ class LpDistance(Distance):
                 clipped_perturbation = p
                 return references + clipped_perturbation
 
-        norms = torch.linalg.vector_norm(flatten(p), self.p, dim=-1)
+        norms = torch.norm(flatten(p), self.p, dim=-1)
         norms = torch.maximum(norms, torch.tensor(1e-12))  # avoid divsion by zero
         factor = epsilon / norms
         factor = torch.minimum(
@@ -117,7 +118,7 @@ class LpDistance(Distance):
         if self.p == torch.inf:
             return x.sign()
         else:
-            norms = torch.linalg.vector_norm(flatten(x), ord=self.p, dim=-1)
+            norms = torch.norm(flatten(x), p=self.p, dim=-1)
             norms = torch.maximum(norms, torch.tensor(1e-12, device=norms.device))
             factor = 1 / norms
             factor = atleast_kd(factor, x.ndim)

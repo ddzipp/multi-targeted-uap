@@ -1,7 +1,9 @@
-import os
 import importlib
-from models.base import RegisterModel
+import os
 
+import timm
+
+from models.base import RegisterModel
 
 models_dir = os.path.dirname(__file__)
 for filename in os.listdir(models_dir):
@@ -18,8 +20,6 @@ def get_model(model_name, *args, **kwargs):
         model = model_hub[model_name.lower()](*args, **kwargs)
         return model.model, model.processor
     else:
-        import timm
-
         model = timm.create_model(model_name, pretrained=True).eval()
         data_cfg = timm.data.resolve_data_config(model.pretrained_cfg)
         transform = timm.data.create_transform(**data_cfg)

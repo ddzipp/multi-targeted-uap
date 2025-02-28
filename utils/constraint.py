@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+import torch
 
 from utils.distance import get_distance
 
@@ -48,7 +48,7 @@ class Constraint:
         self.bound = bound
         # Validate inputs
         self._validate_inputs()
-        self.mask = None
+        self.mask: torch.Tensor = None
 
         if mode != "direct":
             self.norm_type = torch.inf

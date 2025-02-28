@@ -1,7 +1,8 @@
-from torch.utils.data import Dataset
-import os
 import json
+import os
+
 from PIL import Image
+from torch.utils.data import Dataset
 
 from dataset.base import VisualDict
 
@@ -21,8 +22,12 @@ class VQADataset(Dataset):
             self.path, f"v2_mscoco_{split}2014_complicated.json"
         )
         self.image_path = os.path.join(self.path, f"{split}2014")
-        self.questions = json.load(open(self.question_path, "r"))["questions"]
-        self.answers = json.load(open(self.annotation_path, "r"))["annotations"]
+        self.questions = json.load(open(self.question_path, "r", encoding="utf-8"))[
+            "questions"
+        ]
+        self.answers = json.load(open(self.annotation_path, "r", encoding="utf-8"))[
+            "annotations"
+        ]
         self.length = len(self.questions)
         self.transform = transform
 
