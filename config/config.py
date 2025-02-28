@@ -22,7 +22,7 @@ class Config:
     optimizer: str = "momentum"
     mu: float = 0.9
     epoch: int = 500
-    lr: float = 5 / epoch
+    lr: float = 0.1
     attack_mode: str = "frame"
     norm_type: str = "linf"
     norm_epsilon: float = 1.0

@@ -69,8 +69,8 @@ class Attacker:
             loss = self.model(**inputs, labels=label_ids).loss
         else:
             # DNN model
-            processed_image = self.processor(image).unsqueeze(0).cuda()
+            processed_image = self.processor(image)
             logits = self.model(processed_image)
-            target = torch.tensor([int(label)]).cuda()
+            target = torch.tensor(label).cuda()
             loss = self.loss_fn(logits, target)
         return loss

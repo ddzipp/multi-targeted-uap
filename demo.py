@@ -1,12 +1,13 @@
 import os
 
 import torch
+from accelerate import Accelerator
 from torch.utils.data import Subset
 from tqdm import tqdm
 
 from attacks.base import Attacker
 from config.config import Config
-from dataset import load_dataset
+from dataset import collate_fn, load_dataset
 from dataset.base import VisionData
 from models import get_model
 from utils.constraint import Constraint
@@ -16,63 +17,67 @@ from utils.optimizer import Optimizer
 os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3,4"
 
 
-def main():
-    # init config, model and processor
-    cfg = Config()
-    model, processor = get_model(cfg.model_name)
-    # init dataset and dataloader
-    dataset = load_dataset(cfg.dataset_name)
-    # random choose two targets and classes
+def attack_dataloader(dataset_name: str):
     sample_id = torch.tensor(list(range(100, 130)) + list(range(1000, 1030)))
-    dataset_label = Subset(dataset, sample_id)
-    target0, target1 = 50, 651
+    dataset = load_dataset(dataset_name, target=50)
+    dataset_0 = Subset(dataset, sample_id[:30])
+    dataset = load_dataset(dataset_name, target=100)
+    dataset_1 = Subset(dataset, sample_id[30:])
+    dataset = torch.utils.data.ConcatDataset([dataset_0, dataset_1])
+    dataloader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=60,
+        shuffle=True,
+        collate_fn=collate_fn,
+    )
+    return dataloader
+
+
+def main():
+    # init dataset and dataloader
+    cfg = Config()
+    dataloader = attack_dataloader(cfg.dataset_name)
+    model, processor = get_model(cfg.model_name)
+    accelerator = Accelerator()
+    model, dataloader = accelerator.prepare(model, dataloader)
+
     # init logger
     run = WBLogger(project="multi-targeted-test", config=cfg, name="DNN-test").run
+
     # initialize attack
     attacker = Attacker(model, processor)
-
-    # init perturbation, constraint and optimizer
-    perturbation = torch.rand_like(dataset[0]["image"])
+    perturbation = torch.rand([1, 3, 299, 299])
     constraint = Constraint(cfg.attack_mode)
-    optimizer = Optimizer([perturbation], cfg.optimizer, cfg.lr)
+    optimizer = Optimizer(
+        [perturbation], method=cfg.optimizer, lr=cfg.lr, accelerator=accelerator
+    )
 
     # define train step function
-    def step(item: VisionData, target: str | int):
+    def step(item: VisionData):
         optimizer.zero_grad()
-        image, question, answer = item["image"], item["question"], item["answer"]
+        image, target = item["image"], item["target"]
         perturbed_image = constraint(image, perturbation)
         loss = attacker.calc_loss(perturbed_image, label=target)
-        loss.backward()
+        accelerator.backward(loss)
         optimizer.step()
-        run.log({"loss": loss.item()})
-        return loss.item()
+        return loss
 
-    try:
-        # train loop
-        with tqdm(range(cfg.epoch)) as pbar:
-            for t in pbar:
-                train_id = torch.randperm(len(dataset_label))
-                for i in train_id:
-                    item = dataset_label[i]
-                    target = target0 if i < len(sample_id) // 2 else target1
-                    loss = step(item, target)
-                pbar.set_postfix({"loss": f"{loss:.2f}"})
-                pbar.update()
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    finally:
-        # save perturbation and mask
-        torch.save(
-            {
-                "perturbation": perturbation,
-                "mask": constraint.mask,
-                "sample_ids": sample_id,
-                "target_0": target0,
-                "target_1": target1,
-            },
-            "save/perturbation.pth",
-        )
-        run.save("save/perturbation.pth", base_path="save")
+    # train loop
+    for _ in tqdm(range(cfg.epoch)):
+        total_loss = 0
+        for item in dataloader:
+            loss = step(item)
+            total_loss += loss.item()
+        run.log({"loss": total_loss / len(dataloader)})
+    # save perturbation and mask
+    torch.save(
+        {
+            "perturbation": perturbation,
+            "mask": constraint.mask,
+        },
+        "save/perturbation.pth",
+    )
+    run.save("save/perturbation.pth", base_path="save")
 
 
 if __name__ == "__main__":

@@ -2,7 +2,16 @@ from torch import optim
 
 
 class Optimizer:
-    def __init__(self, params, method="Momentum", lr=1e-2, targeted=True, **kwargs):
+    def __init__(
+        self,
+        params,
+        method="Momentum",
+        *,
+        accelerator=None,
+        lr=1e-2,
+        targeted=True,
+        **kwargs
+    ):
         maximize = not targeted
 
         if method.lower() == "sgd":
@@ -20,7 +29,10 @@ class Optimizer:
         else:
             raise NotImplementedError
 
-        self.optimizer = optimizer
+        self.optimizer = (
+            optimizer if accelerator is None else accelerator.prepare(optimizer)
+        )
+
         self._params = params
         for p in self._params:
             p.requires_grad_()

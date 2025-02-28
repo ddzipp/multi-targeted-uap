@@ -3,7 +3,7 @@ import torch
 from utils.distance import get_distance
 
 
-class Constraint:
+class Constraint(torch.nn.Module):
     """
     Class to handle constraints and application of adversarial perturbations to images.
 
@@ -88,7 +88,7 @@ class Constraint:
             perturbation, epsilon=self.epsilon, references=original
         )
 
-    def apply(self, image: torch.Tensor, perturbation: torch.Tensor):
+    def apply_perturbation(self, image: torch.Tensor, perturbation: torch.Tensor):
         """
         Apply the perturbation to the image according to the specified mode.
 
@@ -99,10 +99,8 @@ class Constraint:
         Returns:
             torch.Tensor: Perturbed image(s)
         """
-        assert (
-            perturbation.shape == image.shape
-        ), "Perturbation and image must have the same shape."
-
+        # Repeat the perturbation to the same shape of the image
+        perturb = perturbation.expand_as(image).to(image.device)
         # Make a copy of the image to avoid modifying the original
         perturbed_image = image.clone()
 
@@ -124,7 +122,7 @@ class Constraint:
             self.mask[..., w:-w, w:-w] = 0
 
         # Apply the perturbation only to the frame area
-        perturbed_image = perturbed_image * (1 - self.mask) + perturbation * self.mask
+        perturbed_image = perturbed_image * (1 - self.mask) + perturb * self.mask
 
         # Ensure the resulting image has valid pixel values (assuming 0-1 range)
         perturbed_image = torch.clamp(perturbed_image, self.bound[0], self.bound[1])
@@ -143,4 +141,4 @@ class Constraint:
         Returns:
             torch.Tensor: Perturbed and clipped image(s)
         """
-        return self.apply(image, perturbation)
+        return self.apply_perturbation(image, perturbation)
