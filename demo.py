@@ -1,12 +1,11 @@
 import os
 
-import matplotlib.pyplot as plt
 import torch
 from tqdm import tqdm
 
 from attacks.base import Attacker
 from config.config import Config
-from dataset.base import load_dataset
+from dataset import load_dataset
 from models import get_model
 from utils.constraint import Constraint
 from utils.logger import WBLogger

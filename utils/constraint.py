@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 from utils.distance import get_distance
@@ -23,6 +22,7 @@ class Constraint:
         mode: str = "frame",
         epsilon: float = 1.0,
         norm_type: str = "linf",
+        *,
         frame_width: int = 6,
         patch_size: tuple = (40, 40),
         patch_location: tuple = (0, 0),
@@ -32,11 +32,11 @@ class Constraint:
         Initialize the constraint.
 
         Args:
-            mode (str): Mode for applying perturbation ('direct', 'patch', or 'frame')
+            mode (str): Mode for perturbation ('direct', 'patch', or 'frame')
             epsilon (float): Maximum perturbation magnitude
-            norm_type (str): Type of norm to constrain perturbation ('linf', 'l2', 'l1')
+            norm_type (str): Type of norm ('linf', 'l2', 'l1')
             patch_size (tuple): (width, height) of the patch
-            patch_location (tuple): (x, y) coordinates of the top-left corner of the patch
+            patch_location (tuple): (x, y) is top-left corner of the patch
             frame_width (int, optional): Width of the frame for frame mode
         """
         self.mode = mode.lower()
@@ -48,10 +48,10 @@ class Constraint:
         self.bound = bound
         # Validate inputs
         self._validate_inputs()
-        self.mask: torch.Tensor = None
+        self.mask: torch.Tensor = torch.zeros(1)
 
         if mode != "direct":
-            self.norm_type = torch.inf
+            self.norm_type = "linf"
             self.epsilon = 1.0
         self.distance = get_distance(self.norm_type)
 

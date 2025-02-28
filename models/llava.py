@@ -17,7 +17,8 @@ class LLava(VisualLanguageModel):
         """Usage
         input_ids = tokenizer(prompt, return_tensors="pt")
         pixel_values = image_processor(images, return_tensors="pt")["pixel_values"]
-        output = model (.generate)(input_ids=input_ids["input_ids"], pixel_values=pixel_values, attention_mask=input_ids["attention_mask"])
+        output = model (.generate)(input_ids=input_ids["input_ids"],
+        pixel_values=pixel_values, attention_mask=input_ids["attention_mask"])
         processor.batch_decode(output.logits[:, -1, :].argmax(-1), skip_special_tokens=True)
         """
 

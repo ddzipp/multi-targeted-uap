@@ -1,36 +1,40 @@
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import TypeVar
 
 import torch
 
-T = TypeVar("T", bound=torch.Tensor)
 
-
-def atleast_kd(x: T, k: int) -> T:
+def atleast_kd(x: torch.Tensor, k: int) -> torch.Tensor:
     shape = x.shape + (1,) * (k - x.ndim)
     return x.reshape(shape)
 
 
-def flatten(x: T, start_dim: int = 1) -> T:
+def flatten(x: torch.Tensor, start_dim: int = 1) -> torch.Tensor:
     return x.flatten(start_dim=start_dim)
 
 
 class Distance(ABC):
     @abstractmethod
-    def __call__(self, reference: T, perturbed: T) -> T: ...
+    def __call__(
+        self, reference: torch.Tensor, perturbed: torch.Tensor
+    ) -> torch.Tensor: ...
 
     @abstractmethod
     def clip_perturbation(
-        self, perturbed: T, *, epsilon: float, references: T | None
-    ) -> T: ...
+        self,
+        perturbed: torch.Tensor,
+        *,
+        epsilon: float,
+        references: torch.Tensor | None,
+    ) -> torch.Tensor: ...
 
     @abstractmethod
-    def normalize(self, x: T) -> T: ...
+    def normalize(self, x: torch.Tensor) -> torch.Tensor: ...
 
 
 class LpDistance(Distance):
-    """:attr:`ord` defines the vector norm that is computed. The following norms are supported:
+    """:attr:`ord` defines the vector norm that is computed.
+    The following norms are supported:
     ======================   ===============================
     :attr:`ord`              vector norm
     ======================   ===============================
@@ -52,8 +56,10 @@ class LpDistance(Distance):
     def __str__(self) -> str:
         return f"L{self.p} distance"
 
-    def __call__(self, references: T, perturbed: T) -> T:
-        """Calculates the distances from references to perturbed using the Lp norm.
+    def __call__(
+        self, references: torch.Tensor, perturbed: torch.Tensor
+    ) -> torch.Tensor:
+        """Calculates the distances from references to perturbed.
 
         Args:
             references: A batch of reference inputs.
@@ -70,16 +76,20 @@ class LpDistance(Distance):
         return norms
 
     def clip_perturbation(
-        self, perturbed: T, *, epsilon: float, references: T | None = None
-    ) -> T:
-        """Clips the perturbations to epsilon and returns the new perturbed
+        self,
+        perturbed: torch.Tensor,
+        *,
+        epsilon: float,
+        references: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        """Clips the perturbations to epsilon
 
         Args:
             references: A batch of reference inputs.
             perturbed: A batch of perturbed inputs.
 
         Returns:
-            A tenosr like perturbed but with the perturbation clipped to epsilon.
+            A new perturbation adhere to epsilon.
         """
         if references is None:
             references = torch.zeros_like(perturbed)
@@ -89,16 +99,14 @@ class LpDistance(Distance):
             if isinstance(epsilon, float):
                 clipped_perturbation = torch.clip(p, -epsilon, epsilon)
                 return references + clipped_perturbation
-            else:
-                assert (
-                    isinstance(epsilon, torch.Tensor) and epsilon.shape[0] == p.shape[0]
-                )
-                _eps = atleast_kd(epsilon, p.ndim)
-                _eps = _eps.repeat(1, *p.shape[1:])
-                p[p > _eps] = _eps[p > _eps]
-                p[p < -_eps] = _eps[p < -_eps]
-                clipped_perturbation = p
-                return references + clipped_perturbation
+
+            assert isinstance(epsilon, torch.Tensor) and epsilon.shape[0] == p.shape[0]
+            _eps = atleast_kd(epsilon, p.ndim)
+            _eps = _eps.repeat(1, *p.shape[1:])
+            p[p > _eps] = _eps[p > _eps]
+            p[p < -_eps] = _eps[p < -_eps]
+            clipped_perturbation = p
+            return references + clipped_perturbation
 
         norms = torch.norm(flatten(p), self.p, dim=-1)
         norms = torch.maximum(norms, torch.tensor(1e-12))  # avoid divsion by zero
@@ -114,15 +122,15 @@ class LpDistance(Distance):
         clipped_perturbation = factor * p
         return references + clipped_perturbation
 
-    def normalize(self, x: T) -> T:
+    def normalize(self, x: torch.Tensor) -> torch.Tensor:
         if self.p == torch.inf:
             return x.sign()
-        else:
-            norms = torch.norm(flatten(x), p=self.p, dim=-1)
-            norms = torch.maximum(norms, torch.tensor(1e-12, device=norms.device))
-            factor = 1 / norms
-            factor = atleast_kd(factor, x.ndim)
-            return x * factor
+
+        norms = torch.norm(flatten(x), p=self.p, dim=-1)
+        norms = torch.maximum(norms, torch.tensor(1e-12, device=norms.device))
+        factor = 1 / norms
+        factor = atleast_kd(factor, x.ndim)
+        return x * factor
 
 
 def get_distance(constraint: str = "l2") -> LpDistance:

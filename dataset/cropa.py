@@ -18,10 +18,5 @@ class CropaDataset(VQADataset):
             self.annotation_path = os.path.join(
                 self.path, f"filtered_v2_mscoco_{split}2014_annotations.json"
             )
-            self.questions = json.load(open(self.question_path, "r", encoding="utf-8"))[
-                "questions"
-            ]
-            self.answers = json.load(open(self.annotation_path, "r", encoding="utf-8"))[
-                "annotations"
-            ]
+            self.questions, self.answers = self.read_question_answer()
             self.length = len(self.questions)

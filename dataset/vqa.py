@@ -22,14 +22,16 @@ class VQADataset(Dataset):
             self.path, f"v2_mscoco_{split}2014_complicated.json"
         )
         self.image_path = os.path.join(self.path, f"{split}2014")
-        self.questions = json.load(open(self.question_path, "r", encoding="utf-8"))[
-            "questions"
-        ]
-        self.answers = json.load(open(self.annotation_path, "r", encoding="utf-8"))[
-            "annotations"
-        ]
+        self.questions, self.answers = self.read_question_answer()
         self.length = len(self.questions)
         self.transform = transform
+
+    def read_question_answer(self):
+        with open(self.question_path, "r", encoding="utf-8") as q_file:
+            questions = json.load(q_file)["questions"]
+        with open(self.annotation_path, "r", encoding="utf-8") as a_file:
+            answers = json.load(a_file)["annotations"]
+        return questions, answers
 
     def get_img_path(self, question):
         return os.path.join(
