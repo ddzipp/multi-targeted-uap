@@ -1,6 +1,7 @@
 import os
 
 import torch
+import torchvision
 from accelerate import Accelerator
 from torch.utils.data import Subset
 from tqdm import tqdm
@@ -16,59 +17,79 @@ from utils.optimizer import Optimizer
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,3,4"
 
+norm_fn = torchvision.transforms.Normalize(
+    mean=torch.tensor([0.4850, 0.4560, 0.4060]),
+    std=torch.tensor([0.2290, 0.2240, 0.2250]),
+)
+
 
 def attack_dataloader(dataset_name: str):
-    sample_id = torch.tensor(list(range(100, 130)) + list(range(1000, 1030)))
-    dataset = load_dataset(dataset_name, target=50)
-    dataset_0 = Subset(dataset, sample_id[:30])
-    dataset = load_dataset(dataset_name, target=100)
-    dataset_1 = Subset(dataset, sample_id[30:])
-    dataset = torch.utils.data.ConcatDataset([dataset_0, dataset_1])
+    sample_id = torch.tensor(list(range(0, 30)) + list(range(1000, 1030)))
+    dataset = load_dataset(dataset_name, target=466)
+    dataset = Subset(dataset, sample_id[:30])
+    # dataset = load_dataset(dataset_name, target=486)
+    # dataset_1 = Subset(dataset, sample_id[30:])
+    # dataset = torch.utils.data.ConcatDataset([dataset_0, dataset_1])
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=60,
+        batch_size=1,
         shuffle=True,
         collate_fn=collate_fn,
     )
-    return dataloader
+    return dataset, dataloader
 
 
 def main():
-    # init dataset and dataloader
+    # init
     cfg = Config()
-    dataloader = attack_dataloader(cfg.dataset_name)
     model, processor = get_model(cfg.model_name)
-    accelerator = Accelerator()
-    model, dataloader = accelerator.prepare(model, dataloader)
-
-    # init logger
-    run = WBLogger(project="multi-targeted-test", config=cfg, name="DNN-test").run
-
-    # initialize attack
-    attacker = Attacker(model, processor)
-    perturbation = torch.rand([1, 3, 299, 299])
-    constraint = Constraint(cfg.attack_mode)
-    optimizer = Optimizer(
-        [perturbation], method=cfg.optimizer, lr=cfg.lr, accelerator=accelerator
+    dataset = load_dataset(cfg.dataset_name, transform=processor)
+    sample_id = torch.tensor(list(range(0, 30)) + list(range(1000, 1030)))
+    dataset = Subset(dataset, sample_id[:30])
+    dataloader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=False,
+        collate_fn=collate_fn,
     )
+    attacker = Attacker(model)
+    constraint = Constraint(cfg.attack_mode)
+    run = WBLogger(
+        project="multi-targeted-test", config=cfg, name="single-targeted"
+    ).run
+
+    # accelerator
+    # accelerator = Accelerator()
+    # model, dataloader = accelerator.prepare(model, dataloader)
+    # optimizer = Optimizer([perturbation],method=cfg.optimizer,lr=cfg.lr)
+
+    momentum = 0
+    torch.manual_seed(42)
+    adv_pert = torch.rand_like(dataset[0]["image"])
 
     # define train step function
-    def step(item: VisionData):
-        optimizer.zero_grad()
+    def step(item: VisionData, perturbation):
         image, target = item["image"], item["target"]
         perturbed_image = constraint(image, perturbation)
-        loss = attacker.calc_loss(perturbed_image, label=target)
-        accelerator.backward(loss)
-        optimizer.step()
+        loss = attacker.calc_loss(perturbed_image, label=466)
         return loss
 
     # train loop
-    for _ in tqdm(range(cfg.epoch)):
-        total_loss = 0
-        for item in dataloader:
-            loss = step(item)
-            total_loss += loss.item()
-        run.log({"loss": total_loss / len(dataloader)})
+    with tqdm(range(cfg.epoch)) as pbar:
+        for _ in pbar:
+            total_loss = 0
+            for item in dataloader:
+                adv_pert = adv_pert.detach().requires_grad_()
+                perturbation = norm_fn(adv_pert)
+                loss = step(item, perturbation)
+                loss.backward()
+                grad = adv_pert.grad
+                momentum = 0.9 * momentum + grad / torch.norm(grad, p=1)
+                adv_pert = (adv_pert - cfg.lr * momentum.sign()).clip_(0, 1)
+                total_loss += loss.item()
+            run.log({"loss": total_loss / len(dataloader)})
+            pbar.set_postfix({"loss": f"{total_loss / len(dataloader):.2f}"})
+
     # save perturbation and mask
     torch.save(
         {

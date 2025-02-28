@@ -18,11 +18,11 @@ class Optimizer:
             optimizer = optim.SGD(params, lr=lr, maximize=maximize, **kwargs)
         elif method.lower() == "momentum":
             optimizer = optim.SGD(
-                params, lr=lr, momentum=1, nesterov=False, maximize=maximize, **kwargs
+                params, lr=lr, momentum=0.9, nesterov=False, maximize=maximize, **kwargs
             )
         elif method.lower() == "nesterov":
             optimizer = optim.SGD(
-                params, lr=lr, momentum=1, nesterov=True, maximize=maximize, **kwargs
+                params, lr=lr, momentum=0.9, nesterov=True, maximize=maximize, **kwargs
             )
         elif method.lower() == "adam":
             optimizer = optim.Adam(params, lr=lr, maximize=maximize, **kwargs)

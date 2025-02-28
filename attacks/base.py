@@ -6,12 +6,11 @@ from models import model_hub
 
 class Attacker:
 
-    def __init__(self, model, processor):
+    def __init__(self, model, processor=None):
         super().__init__()
         self.model = model
         self.processor = processor
         self.loss_fn = torch.nn.CrossEntropyLoss()
-
         if self.processor.__class__.__module__.startswith("torchvision"):
             # remove ToTensor from processor, as the image have been tensorized
             self.processor = transforms.Compose(
@@ -21,7 +20,7 @@ class Attacker:
                     if not isinstance(t, transforms.ToTensor)
                 ]
             )
-        else:
+        if self.model.__class__.__name__ in model_hub:
             # Set eos_token and colon_ids for VLM model
             self.eos_token = self.processor.tokenizer.eos_token
             self.colon_ids = processor.tokenizer.encode(
@@ -69,8 +68,11 @@ class Attacker:
             loss = self.model(**inputs, labels=label_ids).loss
         else:
             # DNN model
-            processed_image = self.processor(image)
+            if self.processor is not None:
+                processed_image = self.processor(image).cuda()
+            else:
+                processed_image = image.cuda()
             logits = self.model(processed_image)
-            target = torch.tensor(label).cuda()
+            target = torch.tensor([label]).cuda()
             loss = self.loss_fn(logits, target)
         return loss
