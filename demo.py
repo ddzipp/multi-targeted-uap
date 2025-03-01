@@ -24,6 +24,7 @@ norm_fn = torchvision.transforms.Normalize(
 
 
 def attack_dataloader(dataset_name: str, transform=None):
+    # Set multi-target labels
     sample_id = torch.tensor(list(range(0, 30)) + list(range(1000, 1030)))
     # One target is 466, another is 486
     dataset = load_dataset(dataset_name, target=466, transform=transform)
@@ -44,8 +45,8 @@ def main():
     # init
     cfg = Config()
     model, processor = get_model(cfg.model_name)
-    dataset, dataloader = attack_dataloader(cfg.dataset_name, transform=processor)
-    attacker = Attacker(model)
+    dataset, dataloader = attack_dataloader(cfg.dataset_name)
+    attacker = Attacker(model, processor)
     constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width)
     run = WBLogger(
         project="multi-targeted-test", config=cfg, name="double-targeted-frame30"
@@ -57,7 +58,7 @@ def main():
 
     momentum = 0
     torch.manual_seed(42)
-    perturbation = torch.rand([1, 3, 224, 224])
+    perturbation = torch.rand([1, 3, 299, 299])
     # optimizer = Optimizer([perturbation], method="adam", lr=1.0)
 
     # define train step function
@@ -67,33 +68,36 @@ def main():
         loss = attacker.calc_loss(perturbed_image, label=target)
         return loss
 
-    # train loop
-    with tqdm(range(cfg.epoch)) as pbar:
-        for _ in pbar:
-            total_loss = 0
-            for item in dataloader:
-                # optimizer.zero_grad()
-                perturbation = perturbation.detach().requires_grad_()
-                adv_pt = norm_fn(perturbation)
-                loss = step(item, adv_pt)
-                loss.backward()
-                # optimizer.step()
-                grad = perturbation.grad
-                momentum = 0.9 * momentum + grad / torch.norm(grad, p=1)
-                perturbation = (perturbation - cfg.lr * momentum.sign()).clip_(0, 1)
-                total_loss += loss.item()
-            run.log({"loss": total_loss / len(dataloader)})
-            pbar.set_postfix({"loss": f"{total_loss / len(dataloader):.2f}"})
-
-    # save perturbation and mask
-    torch.save(
-        {
-            "perturbation": perturbation,
-            "mask": constraint.mask,
-        },
-        "save/perturbation.pth",
-    )
-    run.save("save/perturbation.pth", base_path="save")
+    try:
+        # train loop
+        with tqdm(range(cfg.epoch)) as pbar:
+            for _ in pbar:
+                total_loss = 0
+                for item in dataloader:
+                    # optimizer.zero_grad()
+                    perturbation = perturbation.detach().requires_grad_()
+                    # adv_pt = norm_fn(perturbation)
+                    loss = step(item, perturbation)
+                    loss.backward()
+                    # optimizer.step()
+                    grad = perturbation.grad
+                    momentum = 0.9 * momentum + grad / torch.norm(grad, p=1)
+                    perturbation = (perturbation - cfg.lr * momentum.sign()).clip_(0, 1)
+                    total_loss += loss.item()
+                run.log({"loss": total_loss / len(dataloader)})
+                pbar.set_postfix({"loss": f"{total_loss / len(dataloader):.2f}"})
+    except _ as e:
+        run.log({"error": str(e)})
+    finally:
+        # save perturbation and mask
+        torch.save(
+            {
+                "perturbation": perturbation,
+                "mask": constraint.mask,
+            },
+            "save/perturbation.pth",
+        )
+        run.save("save/perturbation.pth", base_path="save")
 
 
 if __name__ == "__main__":
