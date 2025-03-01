@@ -8,7 +8,7 @@ from dataset.vqa import VQADataset
 
 
 def load_dataset(
-    name, transform=None, *, target=None, path=None, split="val"
+    name, *, transform=None, target=None, path=None, split="val"
 ) -> AttackDataset:
     if path is None:
 

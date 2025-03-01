@@ -7,6 +7,7 @@ class Optimizer:
         params,
         method="Momentum",
         *,
+        sign=True,
         accelerator=None,
         lr=1e-2,
         targeted=True,
@@ -44,4 +45,7 @@ class Optimizer:
             param.requires_grad_()
 
     def step(self, *args, **kwargs):
+        if self.sign:
+            for param in self._params:
+                param.grad.data = param.grad.data.sign()
         self.optimizer.step(*args, **kwargs)

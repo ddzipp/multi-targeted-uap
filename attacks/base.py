@@ -59,7 +59,9 @@ class Attacker:
 
         return inputs, label_ids
 
-    def calc_loss(self, image, question=None, *, answer=None, label=None):
+    def calc_loss(
+        self, image, *, question=None, answer=None, label: list | None = None
+    ):
         # calc loss for vlm model and DNN model
         if self.model.__class__.__name__ in model_hub:
             # VLM model
@@ -73,6 +75,6 @@ class Attacker:
             else:
                 processed_image = image.cuda()
             logits = self.model(processed_image)
-            target = torch.tensor([label]).cuda()
+            target = torch.tensor(label).cuda()
             loss = self.loss_fn(logits, target)
         return loss

@@ -23,16 +23,17 @@ norm_fn = torchvision.transforms.Normalize(
 )
 
 
-def attack_dataloader(dataset_name: str):
+def attack_dataloader(dataset_name: str, transform=None):
     sample_id = torch.tensor(list(range(0, 30)) + list(range(1000, 1030)))
-    dataset = load_dataset(dataset_name, target=466)
-    dataset = Subset(dataset, sample_id[:30])
-    # dataset = load_dataset(dataset_name, target=486)
-    # dataset_1 = Subset(dataset, sample_id[30:])
-    # dataset = torch.utils.data.ConcatDataset([dataset_0, dataset_1])
+    # One target is 466, another is 486
+    dataset = load_dataset(dataset_name, target=466, transform=transform)
+    dataset_0 = Subset(dataset, sample_id[:30])
+    dataset = load_dataset(dataset_name, target=486, transform=transform)
+    dataset_1 = Subset(dataset, sample_id[30:])
+    dataset = torch.utils.data.ConcatDataset([dataset_0, dataset_1])
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=1,
+        batch_size=60,
         shuffle=True,
         collate_fn=collate_fn,
     )
@@ -43,35 +44,27 @@ def main():
     # init
     cfg = Config()
     model, processor = get_model(cfg.model_name)
-    dataset = load_dataset(cfg.dataset_name, transform=processor)
-    sample_id = torch.tensor(list(range(0, 30)) + list(range(1000, 1030)))
-    dataset = Subset(dataset, sample_id[:30])
-    dataloader = torch.utils.data.DataLoader(
-        dataset,
-        batch_size=1,
-        shuffle=False,
-        collate_fn=collate_fn,
-    )
+    dataset, dataloader = attack_dataloader(cfg.dataset_name, transform=processor)
     attacker = Attacker(model)
-    constraint = Constraint(cfg.attack_mode)
+    constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width)
     run = WBLogger(
-        project="multi-targeted-test", config=cfg, name="single-targeted"
+        project="multi-targeted-test", config=cfg, name="double-targeted-frame30"
     ).run
 
-    # accelerator
+    # accelerator for multi-gpu training
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
-    # optimizer = Optimizer([perturbation],method=cfg.optimizer,lr=cfg.lr)
 
     momentum = 0
     torch.manual_seed(42)
-    adv_pert = torch.rand_like(dataset[0]["image"])
+    perturbation = torch.rand([1, 3, 224, 224])
+    # optimizer = Optimizer([perturbation], method="adam", lr=1.0)
 
     # define train step function
     def step(item: VisionData, perturbation):
         image, target = item["image"], item["target"]
         perturbed_image = constraint(image, perturbation)
-        loss = attacker.calc_loss(perturbed_image, label=466)
+        loss = attacker.calc_loss(perturbed_image, label=target)
         return loss
 
     # train loop
@@ -79,13 +72,15 @@ def main():
         for _ in pbar:
             total_loss = 0
             for item in dataloader:
-                adv_pert = adv_pert.detach().requires_grad_()
-                perturbation = norm_fn(adv_pert)
-                loss = step(item, perturbation)
+                # optimizer.zero_grad()
+                perturbation = perturbation.detach().requires_grad_()
+                adv_pt = norm_fn(perturbation)
+                loss = step(item, adv_pt)
                 loss.backward()
-                grad = adv_pert.grad
+                # optimizer.step()
+                grad = perturbation.grad
                 momentum = 0.9 * momentum + grad / torch.norm(grad, p=1)
-                adv_pert = (adv_pert - cfg.lr * momentum.sign()).clip_(0, 1)
+                perturbation = (perturbation - cfg.lr * momentum.sign()).clip_(0, 1)
                 total_loss += loss.item()
             run.log({"loss": total_loss / len(dataloader)})
             pbar.set_postfix({"loss": f"{total_loss / len(dataloader):.2f}"})

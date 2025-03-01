@@ -3,7 +3,7 @@ import torch
 from utils.distance import get_distance
 
 
-class Constraint(torch.nn.Module):
+class Constraint:
     """
     Class to handle constraints and application of adversarial perturbations to images.
 
@@ -20,9 +20,9 @@ class Constraint(torch.nn.Module):
     def __init__(
         self,
         mode: str = "frame",
+        *,
         epsilon: float = 1.0,
         norm_type: str = "linf",
-        *,
         frame_width: int = 6,
         patch_size: tuple = (40, 40),
         patch_location: tuple = (0, 0),
