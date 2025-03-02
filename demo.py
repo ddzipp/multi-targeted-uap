@@ -22,14 +22,14 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
 def attack_dataloader(dataset_name: str, transform=None):
     # Set multi-target labels
     sample_id = torch.tensor(list(range(0, 30)) + list(range(1000, 1030)))
-    dataset = load_dataset(dataset_name, target=487, transform=transform)
+    dataset = load_dataset(dataset_name, target="WARNING!", transform=transform)
     dataset_0 = Subset(dataset, sample_id[:30])
-    dataset = load_dataset(dataset_name, target=841, transform=transform)
+    dataset = load_dataset(dataset_name, target="ERROR!", transform=transform)
     dataset_1 = Subset(dataset, sample_id[30:])
     dataset = torch.utils.data.ConcatDataset([dataset_0, dataset_1])
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=60,
+        batch_size=2,
         shuffle=True,
         collate_fn=collate_fn,
     )
@@ -44,7 +44,7 @@ def main():
     attacker = Attacker(model, processor)
     constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width)
     run = WBLogger(
-        project="multi-targeted-normlize-test",
+        project="multi-targeted-VLM-test",
         config=cfg,
         name="perturbation-on-01-image",
     ).run
@@ -59,10 +59,20 @@ def main():
     # optimizer = Optimizer([perturbation], method="adam", lr=1.0)
 
     # define train step function
-    def step(item: VisionData, perturbation):
+    def step(item: VisionData):
+        nonlocal momentum, perturbation
         image, target, question = item["image"], item["target"], item["question"]
+        # optimizer.zero_grad()
+        # adv_pt = norm_fn(perturbation)
+        perturbation = perturbation.detach().requires_grad_()
         perturbed_image = constraint(image, perturbation)
-        loss = attacker.calc_loss(perturbed_image, question=question, label=target)
+        loss = attacker.calc_loss(perturbed_image, questions=question, labels=target)
+        loss.backward()
+        grad = perturbation.grad
+        momentum = 0.9 * momentum + grad / torch.norm(grad, p=1)
+        perturbation = perturbation - cfg.lr * momentum.sign()
+        perturbation = clip_image(perturbation, normalized=False)
+        # optimizer.step()
         return loss
 
     try:
@@ -71,16 +81,7 @@ def main():
             for _ in pbar:
                 total_loss = 0
                 for item in dataloader:
-                    # optimizer.zero_grad()
-                    perturbation = perturbation.detach().requires_grad_()
-                    # adv_pt = norm_fn(perturbation)
-                    loss = step(item, perturbation)
-                    loss.backward()
-                    # optimizer.step()
-                    grad = perturbation.grad
-                    momentum = 0.9 * momentum + grad / torch.norm(grad, p=1)
-                    perturbation = perturbation - cfg.lr * momentum.sign()
-                    perturbation = clip_image(perturbation, normalized=False)
+                    loss = step(item)
                     total_loss += loss.item()
                 run.log({"loss": total_loss / len(dataloader)})
                 pbar.set_postfix({"loss": f"{total_loss / len(dataloader):.2f}"})

@@ -27,35 +27,41 @@ class Attacker:
                 "Assistant:", add_special_tokens=False
             )[-1]
 
-    def generate_inputs(self, image, question, answer, generation=False):
-        if question is None:
-            question = "Describe this image."
+    def generate_inputs(self, image, questions, answers, generation=False):
+        if questions is None:
+            questions = "Describe this image."
 
-        conversation = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": question},
-                    {"type": "image"},
-                ],
-            },
-            {
-                "role": "assistant",
-                "content": [{"type": "text", "text": answer + self.eos_token}],
-            },
-        ]
-        prompt = self.processor.apply_chat_template(
-            conversation, add_generation_prompt=False
-        )
-
-        if generation:
-            conversation.pop(-1)
-            prompt = self.processor.apply_chat_template(
-                conversation, add_generation_prompt=True
+        # 为每个样本生成对话模板
+        prompts = []
+        for q, a in zip(questions, answers):
+            conv = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": q},
+                        {"type": "image"},
+                    ],
+                },
+                {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": a + self.eos_token}],
+                },
+            ]
+            if generation:
+                conv.pop(-1)
+            conversation = self.processor.apply_chat_template(
+                conv, add_generation_prompt=generation
             )
-        inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+            prompts.append(conversation)
+
+        inputs = self.processor(
+            images=image, text=prompts, return_tensors="pt", padding=True
+        )
         label_ids = inputs["input_ids"].clone()
-        label_ids[0, : torch.where(label_ids == self.colon_ids)[-1][-1] + 1] = -100
+        colons_poision = torch.where(label_ids == self.colon_ids)[-1][1::2] + 1
+        label_ids[
+            torch.arange(label_ids.shape[1])[None, :] <= colons_poision[:, None]
+        ] = -100
 
         return inputs, label_ids
 
@@ -63,14 +69,14 @@ class Attacker:
         self,
         image: torch.Tensor,  # with batch
         *,
-        question: list | None = None,
-        label: list | None = None
+        questions: list | None = None,
+        labels: list | None = None
     ):
         # calc loss for vlm model and DNN model
         if self.model.__class__.__module__.startswith("transformers"):
             # VLM model
-            assert question is not None, "Question must be provided for VLM model"
-            inputs, label_ids = self.generate_inputs(image, question[0], label[0])
+            assert questions is not None and labels is not None
+            inputs, label_ids = self.generate_inputs(image, questions, labels)
             loss = self.model(**inputs, labels=label_ids).loss
         else:
             # DNN model
@@ -79,6 +85,6 @@ class Attacker:
             else:
                 processed_image = image.cuda()
             logits = self.model(processed_image)
-            target = torch.tensor(label).cuda()
+            target = torch.tensor(labels).cuda()
             loss = self.loss_fn(logits, target)
         return loss

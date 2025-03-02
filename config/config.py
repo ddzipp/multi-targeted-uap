@@ -13,10 +13,10 @@ class Config:
     """
 
     # dataset info
-    dataset_name: str = "ImageNet"
+    dataset_name: str = "VQA"
 
     # model info
-    model_name: str = "resnet50"
+    model_name: str = "llava"
 
     # attack info
     optimizer: str = "momentum"
