@@ -54,3 +54,5 @@ wandb
 data
 # docker-compose.yml
 save
+
+*.pt

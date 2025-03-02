@@ -20,7 +20,7 @@ class Attacker:
                     if not isinstance(t, transforms.ToTensor)
                 ]
             )
-        if self.model.__class__.__name__ in model_hub:
+        if self.model.__class__.__module__.startswith("transformers"):
             # Set eos_token and colon_ids for VLM model
             self.eos_token = self.processor.tokenizer.eos_token
             self.colon_ids = processor.tokenizer.encode(
@@ -60,13 +60,17 @@ class Attacker:
         return inputs, label_ids
 
     def calc_loss(
-        self, image, *, question=None, answer=None, label: list | None = None
+        self,
+        image: torch.Tensor,  # with batch
+        *,
+        question: list | None = None,
+        label: list | None = None
     ):
         # calc loss for vlm model and DNN model
-        if self.model.__class__.__name__ in model_hub:
+        if self.model.__class__.__module__.startswith("transformers"):
             # VLM model
             assert question is not None, "Question must be provided for VLM model"
-            inputs, label_ids = self.generate_inputs(image, question, answer)
+            inputs, label_ids = self.generate_inputs(image, question[0], label[0])
             loss = self.model(**inputs, labels=label_ids).loss
         else:
             # DNN model

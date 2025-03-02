@@ -123,11 +123,10 @@ class Constraint:
 
         # Apply the perturbation only to the frame area
         perturbed_image = perturbed_image * (1 - self.mask) + perturb * self.mask
-
         # Ensure the resulting image has valid pixel values (assuming 0-1 range)
-        perturbed_image = torch.clamp(perturbed_image, self.bound[0], self.bound[1])
-        # perturbed_image = self.clip_perturbation(perturbed_image, image)
-
+        # perturbed_image = torch.clamp(perturbed_image, self.bound[0], self.bound[1])
+        if self.mode == "direct":
+            perturbed_image = self.clip_perturbation(perturbed_image, image)
         return perturbed_image
 
     def __call__(self, image, perturbation):

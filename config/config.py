@@ -26,7 +26,7 @@ class Config:
     attack_mode: str = "frame"
     norm_type: str = "linf"
     norm_epsilon: float = 1.0
-    frame_width: int = 30
+    frame_width: int = 6
     patch_size: int = 40
     patch_location: tuple = (0, 0)
 
