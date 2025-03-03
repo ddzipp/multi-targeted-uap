@@ -72,7 +72,7 @@ class Constraint:
         Returns:
             torch.Tensor: Perturbed image(s)
         """
-        assert image.shape == perturbation.shape
+        assert image.shape[-2:] == perturbation.shape[-2:]
         # Repeat the perturbation to the same shape of the image
         perturb = perturbation.expand_as(image).to(image.device)
         # Make a copy of the image to avoid modifying the original
@@ -98,6 +98,7 @@ class Constraint:
             # Create a mask for the frame
             self.mask = torch.ones_like(image)
             w = self.frame_width
+            h = self.frame_width
             if self.ref_size is not None:
                 w = w * image.shape[-1] // self.ref_size
                 h = h * image.shape[-2] // self.ref_size

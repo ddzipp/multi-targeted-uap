@@ -12,7 +12,7 @@ from models import get_model
 from utils.constraint import Constraint
 from utils.logger import WBLogger
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1,2, 3,4"
 torch.manual_seed(42)
 
 
@@ -20,15 +20,15 @@ def attack_dataloader(dataset_name: str, transform=None, target=None):
     # Set multi-target labels
     target0, target1 = "WARNING!", "ERROR!"
     # target0, target1 = 464, 752
-    sample_id = torch.tensor(list(range(0, 30)) + list(range(1000, 1030)))
+    sample_id = torch.tensor(list(range(0, 5)) + list(range(1000, 1005)))
     dataset = load_dataset(dataset_name, target=target0, transform=transform)
-    dataset_0 = Subset(dataset, sample_id[:30])
+    dataset_0 = Subset(dataset, sample_id[: len(sample_id) // 2])
     dataset = load_dataset(dataset_name, target=target1, transform=transform)
-    dataset_1 = Subset(dataset, sample_id[30:])
+    dataset_1 = Subset(dataset, sample_id[len(sample_id) // 2 :])
     dataset = torch.utils.data.ConcatDataset([dataset_0, dataset_1])
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=2,
+        batch_size=10,
         shuffle=True,
         collate_fn=collate_fn,
     )
@@ -40,12 +40,12 @@ def main():
     cfg = Config()
     model = get_model(cfg.model_name)
     dataloader = attack_dataloader(cfg.dataset_name)
-    constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width)
+    constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width, ref_size=299)
     attacker = Attacker(model, constraint, cfg)
     run = WBLogger(
         project="multi-targeted-VLM-test",
         config=cfg,
-        name="perturbation-on-01-image",
+        name="perturbation-on-normalized-image",
     ).run
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)

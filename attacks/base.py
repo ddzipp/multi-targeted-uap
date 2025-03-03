@@ -40,7 +40,7 @@ class Attacker:
         grad = self.pert.grad
         self.momentum = self.cfg.lr * self.momentum + grad / torch.norm(grad, p=1)
         self.pert = self.pert - self.cfg.lr * self.momentum.sign()
-        self.pert = self.model.clip_image(self.pert, normalized=self.cfg.normalized)
+        self.pert = self.model.clip_image(self.pert, normalized=self.cfg.on_normalized)
         # optimizer.step()
         return loss
 

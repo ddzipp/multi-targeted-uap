@@ -31,7 +31,7 @@ class Config:
     frame_width: int = 6
     patch_size: int = 40
     patch_location: tuple = (0, 0)
-    on_normalized: bool = False
+    on_normalized: bool = True
 
     def asdict(self):
         return asdict(self)
