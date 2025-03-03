@@ -23,10 +23,10 @@ class LLava(VisualLanguageModel):
         """
 
         self.device = device
+        self._processor = AutoProcessor.from_pretrained(self.model_id)
         self._model = LlavaForConditionalGeneration.from_pretrained(
             self.model_id, device_map=device, torch_dtype=torch_dtype
         )
-        self._processor = AutoProcessor.from_pretrained(self.model_id)
 
     @property
     def processor(self):

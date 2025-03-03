@@ -11,7 +11,6 @@ from config.config import Config
 from dataset import collate_fn, load_dataset
 from dataset.base import VisionData
 from models import get_model
-from utils import clip_image
 from utils.constraint import Constraint
 from utils.logger import WBLogger
 from utils.optimizer import Optimizer
@@ -71,7 +70,7 @@ def main():
         grad = perturbation.grad
         momentum = 0.9 * momentum + grad / torch.norm(grad, p=1)
         perturbation = perturbation - cfg.lr * momentum.sign()
-        perturbation = clip_image(perturbation, normalized=False)
+        perturbation = attacker._clip_emb(perturbation, normalized=False)
         # optimizer.step()
         return loss
 

@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 
+import torch
+from torchvision.transforms import Normalize
+
 
 class RegisterModel:
     model_hub: dict = {}

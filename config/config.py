@@ -16,7 +16,7 @@ class Config:
     dataset_name: str = "VQA"
 
     # model info
-    model_name: str = "llava"
+    model_name: str = "resnet50"
 
     # attack info
     optimizer: str = "momentum"
@@ -29,6 +29,7 @@ class Config:
     frame_width: int = 6
     patch_size: int = 40
     patch_location: tuple = (0, 0)
+    image_size = 224  # resetnet
 
     def asdict(self):
         return asdict(self)
