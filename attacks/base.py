@@ -56,7 +56,7 @@ class Attacker:
         os.makedirs(dirpath, exist_ok=True)
         torch.save(
             {
-                "perturbation": self.pert,
+                "perturbation": self.pert.detach(),
                 "mask": self.constraint.mask,
             },
             filename,

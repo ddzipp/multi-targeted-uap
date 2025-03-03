@@ -28,7 +28,7 @@ def attack_dataloader(dataset_name: str, transform=None, target=None):
     dataset = torch.utils.data.ConcatDataset([dataset_0, dataset_1])
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=10,
+        batch_size=1,
         shuffle=True,
         collate_fn=collate_fn,
     )

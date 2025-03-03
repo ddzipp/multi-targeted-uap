@@ -9,5 +9,10 @@ class ImageNetDataset(torchvision.datasets.ImageNet):
 
     def __getitem__(self, idx) -> VisionData:
         image, label = super().__getitem__(idx)
-        response = VisionData(image=image, label=str(label), question=None, answer=None)
+        response = VisionData(
+            image=image,
+            label=str(label),
+            question="Describe this image.",
+            answer="Unknown.",
+        )
         return response

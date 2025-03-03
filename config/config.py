@@ -13,8 +13,8 @@ class Config:
     """
 
     # dataset info
-    dataset_name: str = "VQA"
-    # dataset_name: str = "ImageNet"
+    # dataset_name: str = "VQA"
+    dataset_name: str = "ImageNet"
 
     # model info
     model_name: str = "llava"
