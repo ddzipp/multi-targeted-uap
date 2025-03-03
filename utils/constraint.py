@@ -27,12 +27,13 @@ class Constraint:
         patch_size: tuple = (40, 40),
         patch_location: tuple = (0, 0),
         bound: tuple = (0.0, 1.0),
+        ref_size: int | None = None,
     ) -> None:
         """
         Initialize the constraint.
 
         Args:
-            mode (str): Mode for perturbation ('pixel', 'patch', or 'frame')
+            mode (str): Mode for perturbation ('pixel', 'patch', 'frame', or 'corner')
             epsilon (float): Maximum perturbation magnitude
             norm_type (str): Type of norm ('linf', 'l2', 'l1')
             patch_size (tuple): (width, height) of the patch
@@ -46,42 +47,14 @@ class Constraint:
         self.patch_location = patch_location
         self.frame_width = frame_width
         self.bound = bound
+        self.ref_size = ref_size
         # Validate inputs
-        self._validate_inputs()
         self.mask: torch.Tensor = torch.zeros(1)
 
         if mode != "pixel":
             self.norm_type = "linf"
             self.epsilon = 1.0
         self.distance = get_distance(self.norm_type)
-
-    def _validate_inputs(self):
-        """Validate class initialization inputs."""
-        valid_modes = ["pixel", "patch", "frame"]
-        if self.mode not in valid_modes:
-            raise ValueError(
-                f"Mode must be one of {valid_modes}, got {self.mode} instead."
-            )
-
-        if self.mode == "patch" and (
-            self.patch_size is None or self.patch_location is None
-        ):
-            raise ValueError(
-                "Patch parameters must be provided when using 'patch' mode."
-            )
-
-        if self.mode == "frame" and self.frame_width is None:
-            raise ValueError("Frame width must be provided when using 'frame' mode.")
-
-        if self.mode == "pixel" and (self.epsilon is None or self.norm_type is None):
-            raise ValueError(
-                "Max norm and norm type must be provided when using 'pixel' mode."
-            )
-        valid_norms = ["linf", "l2", "l1", "l0"]
-        if self.norm_type not in valid_norms:
-            raise ValueError(
-                f"Norm type must be one of {valid_norms}, got {self.norm_type} instead."
-            )
 
     def clip_perturbation(self, perturbation, original):
         return self.distance.clip_perturbation(
@@ -99,6 +72,7 @@ class Constraint:
         Returns:
             torch.Tensor: Perturbed image(s)
         """
+        assert image.shape == perturbation.shape
         # Repeat the perturbation to the same shape of the image
         perturb = perturbation.expand_as(image).to(image.device)
         # Make a copy of the image to avoid modifying the original
@@ -113,13 +87,32 @@ class Constraint:
             self.mask = torch.zeros_like(image)
             x, y = self.patch_location
             w, h = self.patch_size
+            if self.ref_size is not None:
+                x = x * image.shape[-1] // self.ref_size
+                y = y * image.shape[-2] // self.ref_size
+                w = w * image.shape[-1] // self.ref_size
+                h = h * image.shape[-2] // self.ref_size
             self.mask[..., y : y + h, x : x + w] = 1
 
         elif self.mode == "frame":
             # Create a mask for the frame
             self.mask = torch.ones_like(image)
             w = self.frame_width
-            self.mask[..., w:-w, w:-w] = 0
+            if self.ref_size is not None:
+                w = w * image.shape[-1] // self.ref_size
+                h = h * image.shape[-2] // self.ref_size
+            self.mask[..., w:-w, h:-h] = 0
+
+        elif self.mode == "corner":
+            self.mask = torch.zeros_like(image)
+            w, h = self.patch_size
+            if self.ref_size is not None:
+                w = w * image.shape[-1] // self.ref_size
+                h = h * image.shape[-2] // self.ref_size
+            self.mask[..., :w, :h] = 1
+            self.mask[..., -w:, -h:] = 1
+            self.mask[..., :w, -h:] = 1
+            self.mask[..., -w:, :h] = 1
 
         # Apply the perturbation only to the frame area
         perturbed_image = perturbed_image * (1 - self.mask) + perturb * self.mask
