@@ -17,7 +17,7 @@ def load_dataset(
     if transform is None:
         transform = transforms.Compose(
             [
-                transforms.Resize((224, 224)),
+                transforms.Resize((299, 299)),
                 transforms.ToTensor(),
             ]
         )

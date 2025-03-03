@@ -14,9 +14,11 @@ class Config:
 
     # dataset info
     dataset_name: str = "VQA"
+    # dataset_name: str = "ImageNet"
 
     # model info
-    model_name: str = "resnet50"
+    model_name: str = "llava"
+    # model_name: str = "resnet50"
 
     # attack info
     optimizer: str = "momentum"
@@ -29,7 +31,7 @@ class Config:
     frame_width: int = 6
     patch_size: int = 40
     patch_location: tuple = (0, 0)
-    image_size = 224  # resetnet
+    on_normalized: bool = False
 
     def asdict(self):
         return asdict(self)

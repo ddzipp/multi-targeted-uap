@@ -12,7 +12,7 @@ class Constraint:
     - Perturbation distribution
 
     Supports different application modes:
-    - Direct: Apply perturbation to the entire image
+    - Pixel: Apply perturbation to the entire image
     - Patch: Apply perturbation to a specific patch of the image
     - Frame: Apply perturbation around the border (frame) of the image
     """
@@ -32,7 +32,7 @@ class Constraint:
         Initialize the constraint.
 
         Args:
-            mode (str): Mode for perturbation ('direct', 'patch', or 'frame')
+            mode (str): Mode for perturbation ('pixel', 'patch', or 'frame')
             epsilon (float): Maximum perturbation magnitude
             norm_type (str): Type of norm ('linf', 'l2', 'l1')
             patch_size (tuple): (width, height) of the patch
@@ -50,14 +50,14 @@ class Constraint:
         self._validate_inputs()
         self.mask: torch.Tensor = torch.zeros(1)
 
-        if mode != "direct":
+        if mode != "pixel":
             self.norm_type = "linf"
             self.epsilon = 1.0
         self.distance = get_distance(self.norm_type)
 
     def _validate_inputs(self):
         """Validate class initialization inputs."""
-        valid_modes = ["direct", "patch", "frame"]
+        valid_modes = ["pixel", "patch", "frame"]
         if self.mode not in valid_modes:
             raise ValueError(
                 f"Mode must be one of {valid_modes}, got {self.mode} instead."
@@ -73,9 +73,9 @@ class Constraint:
         if self.mode == "frame" and self.frame_width is None:
             raise ValueError("Frame width must be provided when using 'frame' mode.")
 
-        if self.mode == "direct" and (self.epsilon is None or self.norm_type is None):
+        if self.mode == "pixel" and (self.epsilon is None or self.norm_type is None):
             raise ValueError(
-                "Max norm and norm type must be provided when using 'direct' mode."
+                "Max norm and norm type must be provided when using 'pixel' mode."
             )
         valid_norms = ["linf", "l2", "l1", "l0"]
         if self.norm_type not in valid_norms:
@@ -104,7 +104,7 @@ class Constraint:
         # Make a copy of the image to avoid modifying the original
         perturbed_image = image.clone()
 
-        if self.mode == "direct":
+        if self.mode == "pixel":
             # Simply add the perturbation to the entire image
             self.mask = torch.zeros_like(image)
 
@@ -125,7 +125,7 @@ class Constraint:
         perturbed_image = perturbed_image * (1 - self.mask) + perturb * self.mask
         # Ensure the resulting image has valid pixel values (assuming 0-1 range)
         # perturbed_image = torch.clamp(perturbed_image, self.bound[0], self.bound[1])
-        if self.mode == "direct":
+        if self.mode == "pixel":
             perturbed_image = self.clip_perturbation(perturbed_image, image)
         return perturbed_image
 
