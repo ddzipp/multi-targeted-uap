@@ -1,4 +1,5 @@
 import json
+import re
 
 import torch
 import yaml
@@ -13,10 +14,12 @@ from utils.constraint import Constraint
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/multi-targeted-DNN-test/nvc8z36c"
+run_path = "lichangyue/label_num_DNN_test/0ex4qqxf"
 run = api.run(run_path)
 config = json.loads(run.json_config)
-file = run.file("perturbation.pth").download(replace=True, exist_ok=True)
+file = run.file("perturbation.pth").download(
+    root="./save", replace=False, exist_ok=True
+)
 results = torch.load(file.name)
 
 # Offline
@@ -30,7 +33,10 @@ config = {key: value["value"] for key, value in config.items() if key != "_wandb
 cfg = Config(**config)
 
 # Test on the training set or the test set
-cfg.sample_id = torch.tensor(cfg.sample_id) + 10
+cfg.sample_id = torch.tensor(
+    [list(map(int, re.findall(r"\d+", x))) for x in cfg.sample_id[1:-2].split(r"]")]
+)
+cfg.sample_id = torch.tensor(cfg.sample_id) + 30
 
 model = get_model(cfg.model_name)
 dataloader = attack_dataloader(cfg.dataset_name, cfg.sample_id, cfg.targets)

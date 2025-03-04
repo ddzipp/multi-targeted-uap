@@ -67,6 +67,18 @@ class Attacker:
             total_loss += loss.item()
         return total_loss / len(dataloader)
 
+    @torch.no_grad()
+    def tester(self, dataloader):
+        asr = 0
+        for item in dataloader:
+            inputs, target = self.get_inputs(**item, generation=True)
+            image, target = inputs["pixel_values"].cuda(), target.cuda()
+            # label = torch.tensor([int(label) for label in item["label"]], device="cuda")
+            logits = self.model.model(image)
+            pred = logits.argmax(-1)
+            asr += (pred == target).sum().item()
+        return asr / len(dataloader)
+
     def saver(self, filename="./save/perturbation.pth"):
         dirpath = os.path.dirname(filename)
         os.makedirs(dirpath, exist_ok=True)

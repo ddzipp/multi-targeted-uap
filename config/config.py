@@ -16,9 +16,9 @@ class Config:
     # dataset info
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
-    targets: torch.Tensor = torch.randperm(1000)[:3]
+    targets: torch.Tensor = torch.randperm(1000)[:10]
     sample_id: torch.Tensor = torch.stack(
-        [torch.arange(1000 * i, 1000 * i + 5) for i in range(targets.shape[-1])]
+        [torch.arange(1000 * i, 1000 * i + 30) for i in range(targets.shape[-1])]
     )
 
     # model info
