@@ -1,6 +1,7 @@
 import argparse
 from dataclasses import asdict, dataclass
 
+import torch
 import yaml
 
 
@@ -15,16 +16,20 @@ class Config:
     # dataset info
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
+    targets: torch.Tensor = torch.randperm(1000)[:3]
+    sample_id: torch.Tensor = torch.stack(
+        [torch.arange(1000 * i, 1000 * i + 5) for i in range(targets.shape[-1])]
+    )
 
     # model info
-    model_name: str = "llava"
-    # model_name: str = "resnet50"
+    # model_name: str = "llava"
+    model_name: str = "resnet50"
 
     # attack info
     optimizer: str = "momentum"
     mu: float = 0.9
     epoch: int = 500
-    lr: float = 5 / epoch
+    lr: float = 20 / epoch
     attack_mode: str = "frame"
     norm_type: str = "linf"
     norm_epsilon: float = 1.0

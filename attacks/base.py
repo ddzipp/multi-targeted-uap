@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import torch
 
@@ -19,35 +20,50 @@ class Attacker:
         self.pert = torch.rand([3, 299, 299])
         # self.optimizer = Optimizer([perturbation], method="adam", lr=1.0)
 
-    def step(self, image, target, question, label, answer) -> torch.Tensor:
-        self.pert = self.pert.detach().requires_grad_()
-        if not self.cfg.on_normalized:
-            perturbed_image = self.constraint(image, self.pert)
-            inputs, target = self.model.generate_inputs(
-                perturbed_image, targets=target, questions=question
-            )
-        else:
-            inputs, target = self.model.generate_inputs(
-                image, targets=target, questions=question
-            )
+    def get_inputs(
+        self, image, target, question, label, answer, generation=False
+    ) -> torch.Tensor:
+        # add perturbation to pixel_values
+        perturbed_image = (
+            image if self.cfg.on_normalized else self.constraint(image, self.pert)
+        )
+
+        inputs, target = self.model.generate_inputs(
+            perturbed_image,
+            targets=target,
+            questions=question,
+            generation=generation,
+        )
+        # add perturbation to pixel_values
+        if self.cfg.on_normalized:
             if self.pert.shape[-2:] != inputs["pixel_values"].shape[-2:]:
+                warnings.warn(
+                    "The shape of perturbation is not equal to the shape of image, "
+                    "Re-init the perturbation."
+                )
                 self.pert = torch.rand_like(
                     inputs["pixel_values"][0], requires_grad=True
                 )
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)
-        loss = self.model.calc_loss(inputs, target)
-        loss.backward()
-        grad = self.pert.grad
-        self.momentum = self.cfg.lr * self.momentum + grad / torch.norm(grad, p=1)
-        self.pert = self.pert - self.cfg.lr * self.momentum.sign()
-        self.pert = self.model.clip_image(self.pert, normalized=self.cfg.on_normalized)
-        # optimizer.step()
-        return loss
+        inputs["pixel_values"] = self.model.clip_image(
+            inputs["pixel_values"], normalized=self.cfg.on_normalized
+        )
+        return inputs, target
 
     def trainer(self, dataloader) -> float:
         total_loss = 0
         for item in dataloader:
-            loss = self.step(**item)
+            self.pert = self.pert.detach().requires_grad_()
+            inputs, target = self.get_inputs(**item)
+            loss = self.model.calc_loss(inputs, target)
+            loss.backward()
+            # optimizer.step()
+            grad = self.pert.grad
+            self.momentum = self.cfg.lr * self.momentum + grad / torch.norm(grad, p=1)
+            self.pert = self.pert - self.cfg.lr * self.momentum.sign()
+            self.pert = self.model.clip_image(
+                self.pert, normalized=self.cfg.on_normalized
+            )
             total_loss += loss.item()
         return total_loss / len(dataloader)
 
@@ -57,7 +73,7 @@ class Attacker:
         torch.save(
             {
                 "perturbation": self.pert.detach(),
-                "mask": self.constraint.mask,
+                # "mask": self.constraint.mask,
             },
             filename,
         )
