@@ -16,7 +16,7 @@ class Config:
     # dataset info
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
-    targets: torch.Tensor = torch.randperm(1000)[:10]
+    targets: torch.Tensor = torch.randperm(1000)[:5]
     sample_id: torch.Tensor = torch.stack(
         [torch.arange(1000 * i, 1000 * i + 30) for i in range(targets.shape[-1])]
     )
@@ -33,7 +33,7 @@ class Config:
     attack_mode: str = "frame"
     norm_type: str = "linf"
     norm_epsilon: float = 1.0
-    frame_width: int = 6
+    frame_width: int = 10
     patch_size: int = 40
     patch_location: tuple = (0, 0)
     on_normalized: bool = True

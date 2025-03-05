@@ -14,12 +14,10 @@ from utils.constraint import Constraint
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/label_num_DNN_test/0ex4qqxf"
+run_path = "lichangyue/label_num_DNN_test/2r9quj8n"
 run = api.run(run_path)
 config = json.loads(run.json_config)
-file = run.file("perturbation.pth").download(
-    root="./save", replace=False, exist_ok=True
-)
+file = run.file("perturbation.pth").download(root="./save", replace=True)
 results = torch.load(file.name)
 
 # Offline
@@ -36,33 +34,47 @@ cfg = Config(**config)
 cfg.sample_id = torch.tensor(
     [list(map(int, re.findall(r"\d+", x))) for x in cfg.sample_id[1:-2].split(r"]")]
 )
-cfg.sample_id = torch.tensor(cfg.sample_id) + 30
-
+cfg.sample_id = torch.tensor(cfg.sample_id)
 model = get_model(cfg.model_name)
-dataloader = attack_dataloader(cfg.dataset_name, cfg.sample_id, cfg.targets)
-dataset = dataloader.dataset
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=30, shuffle=False)
 
-constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width, ref_size=299)
-attacker = Attacker(model, constraint, cfg)
-attacker.pert = results["perturbation"]
 
-asr = 0.0
-acc = 0.0
-loss = 0.0
-model.model.eval()
-with torch.no_grad():
-    for item in dataloader:
-        inputs, target = attacker.get_inputs(**item, generation=True)
-        image, target = inputs["pixel_values"].cuda(), target.cuda()
-        label = torch.tensor([int(label) for label in item["label"]], device="cuda")
-        logits = model.model(image)
-        pred = logits.argmax(-1)
-        acc += (pred == label).sum().item()
-        asr += (pred == target).sum().item()
+def evaluate(cfg):
 
-print("Loss", model.calc_loss(inputs, target))
-asr /= len(dataset)
-acc /= len(dataset)
-print("ASR: ", asr)
-print("ACC: ", acc)
+    dataloader = attack_dataloader(cfg.dataset_name, cfg.sample_id, cfg.targets)
+    dataset = dataloader.dataset
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=30, shuffle=False)
+
+    constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width, ref_size=299)
+    attacker = Attacker(model, constraint, cfg)
+    attacker.pert = results["perturbation"]
+
+    asr = 0.0
+    acc = 0.0
+    loss = 0.0
+    model.model.eval()
+    loss_fn = torch.nn.CrossEntropyLoss()
+    with torch.no_grad():
+        for item in dataloader:
+            inputs, target = attacker.get_inputs(**item, generation=True)
+            image, target = inputs["pixel_values"].cuda(), target.cuda()
+            label = torch.tensor([int(label) for label in item["label"]], device="cuda")
+            logits = model.model(image)
+            pred = logits.argmax(-1)
+            acc += (pred == label).sum().item()
+            asr += (pred == target).sum().item()
+            loss += loss_fn(logits, target).item()
+
+    print("Loss", loss := loss / len(dataloader))
+    asr /= len(dataset)
+    acc /= len(dataset)
+    print("ASR: ", asr)
+    print("ACC: ", acc)
+    return asr, acc, loss
+
+
+asr, acc, loss = evaluate(cfg)
+run.summary.update({"Train_ASR": asr, "Train_ACC": acc, "Train_Loss": loss})
+
+cfg.sample_id += 30
+asr, acc, loss = evaluate(cfg)
+run.summary.update({"Test_ASR": asr, "Test_ACC": acc, "Test_Loss": loss})

@@ -45,7 +45,7 @@ def main():
     run = WBLogger(
         project="label_num_DNN_test",
         config=cfg,
-        name="label_10",
+        name="label5_width10",
     ).run
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
