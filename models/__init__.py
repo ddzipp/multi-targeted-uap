@@ -1,5 +1,6 @@
 import importlib
 import os
+import time
 
 from models.base import RegisterModel, TimmModel
 
@@ -14,9 +15,15 @@ model_hub = {k.lower(): v for k, v in model_hub.items()}
 
 
 def get_model(model_name, *args, **kwargs):
-    if model_name.lower() in model_hub:
-        model = model_hub[model_name.lower()](*args, **kwargs)
-        return model
+    for _ in range(3):
+        try:
+            if model_name.lower() in model_hub:
+                model = model_hub[model_name.lower()](*args, **kwargs)
+                return model
 
-    model = TimmModel(model_name)
-    return model
+            model = TimmModel(model_name)
+            return model
+        except Exception as e:
+            last_exception = e
+            time.sleep(1)
+    raise last_exception

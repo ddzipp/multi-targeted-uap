@@ -16,24 +16,25 @@ class Config:
     # dataset info
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
-    targets: torch.Tensor = torch.randperm(1000)[:5]
+    # targets: torch.Tensor = torch.randperm(1000)[:2]
+    targets: tuple = ("WARNING!", "ERROR!")
     sample_id: torch.Tensor = torch.stack(
-        [torch.arange(1000 * i, 1000 * i + 30) for i in range(targets.shape[-1])]
+        [torch.arange(1000 * i, 1000 * i + 30) for i in range(len(targets))]
     )
 
     # model info
     # model_name: str = "llava"
-    model_name: str = "resnet50"
+    model_name: str = "llava"
 
     # attack info
     optimizer: str = "momentum"
     mu: float = 0.9
     epoch: int = 500
-    lr: float = 20 / epoch
+    lr: float = 0.1
     attack_mode: str = "frame"
     norm_type: str = "linf"
     norm_epsilon: float = 1.0
-    frame_width: int = 10
+    frame_width: int = 6
     patch_size: int = 40
     patch_location: tuple = (0, 0)
     on_normalized: bool = True

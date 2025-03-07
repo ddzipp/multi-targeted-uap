@@ -146,7 +146,11 @@ class VisualLanguageModel(Model):
             prompts.append(conversation)
 
         inputs = self.processor(
-            images=image, text=prompts, return_tensors="pt", padding=True
+            images=image,
+            text=prompts,
+            return_tensors="pt",
+            padding=True,
+            do_rescale=False,  # the image is already rescaled to [0, 1]
         )
         label_ids = inputs["input_ids"].clone()
         colons_poision = torch.where(label_ids == colon_ids)[-1][1::2] + 1

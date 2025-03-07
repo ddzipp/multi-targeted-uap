@@ -4,7 +4,6 @@ import re
 import torch
 import yaml
 
-# Online
 import wandb
 from attacks.base import Attacker
 from config import Config
@@ -14,10 +13,10 @@ from utils.constraint import Constraint
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/label_num_DNN_test/2r9quj8n"
+run_path = "lichangyue/multi-targeted-VLM-test/dbrfhwqf"
 run = api.run(run_path)
 config = json.loads(run.json_config)
-file = run.file("perturbation.pth").download(root="./save", replace=True)
+file = run.file("perturbation.pth").download(root="./save", replace=True, exist_ok=True)
 results = torch.load(file.name)
 
 # Offline
@@ -75,6 +74,6 @@ def evaluate(cfg):
 asr, acc, loss = evaluate(cfg)
 run.summary.update({"Train_ASR": asr, "Train_ACC": acc, "Train_Loss": loss})
 
-cfg.sample_id += 30
+cfg.sample_id = (cfg.sample_id + 30)[:, :20]
 asr, acc, loss = evaluate(cfg)
 run.summary.update({"Test_ASR": asr, "Test_ACC": acc, "Test_Loss": loss})

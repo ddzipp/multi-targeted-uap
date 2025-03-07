@@ -12,7 +12,7 @@ from models import get_model
 from utils.constraint import Constraint
 from utils.logger import WBLogger
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4"
 torch.manual_seed(42)
 
 
@@ -28,7 +28,7 @@ def attack_dataloader(dataset_name: str, sample_id, targets, transform=None):
     dataset = torch.utils.data.ConcatDataset(datasets)
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=20,
+        batch_size=1,
         shuffle=True,
         collate_fn=collate_fn,
     )
@@ -43,9 +43,9 @@ def main():
     constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width, ref_size=299)
     attacker = Attacker(model, constraint, cfg)
     run = WBLogger(
-        project="label_num_DNN_test",
+        project="VLM_batch_test",
         config=cfg,
-        name="label5_width10",
+        name="batch=1",
     ).run
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
