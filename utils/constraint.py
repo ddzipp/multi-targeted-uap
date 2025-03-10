@@ -49,7 +49,7 @@ class Constraint:
         self.bound = bound
         self.ref_size = ref_size
         # Validate inputs
-        self.mask: torch.Tensor = torch.zeros(1)
+        self._mask: torch.Tensor = torch.zeros(1)
 
         if mode != "pixel":
             self.norm_type = "linf"
@@ -60,6 +60,45 @@ class Constraint:
         return self.distance.clip_perturbation(
             perturbation, epsilon=self.epsilon, references=original
         )
+
+    def get_mask(self, image):
+        if self.mode == "pixel":
+            # Simply add the perturbation to the entire image
+            self._mask = torch.zeros_like(image)
+
+        elif self.mode == "patch":
+            # Create a mask for the patch
+            self._mask = torch.zeros_like(image)
+            x, y = self.patch_location
+            w, h = self.patch_size
+            if self.ref_size is not None:
+                x = x * image.shape[-1] // self.ref_size
+                y = y * image.shape[-2] // self.ref_size
+                w = w * image.shape[-1] // self.ref_size
+                h = h * image.shape[-2] // self.ref_size
+            self._mask[..., y : y + h, x : x + w] = 1
+
+        elif self.mode == "frame":
+            # Create a mask for the frame
+            self._mask = torch.ones_like(image)
+            w = self.frame_width
+            h = self.frame_width
+            if self.ref_size is not None:
+                w = w * image.shape[-1] // self.ref_size
+                h = h * image.shape[-2] // self.ref_size
+            self._mask[..., w:-w, h:-h] = 0
+
+        elif self.mode == "corner":
+            self._mask = torch.zeros_like(image)
+            w, h = self.patch_size
+            if self.ref_size is not None:
+                w = w * image.shape[-1] // self.ref_size
+                h = h * image.shape[-2] // self.ref_size
+            self._mask[..., :w, :h] = 1
+            self._mask[..., -w:, -h:] = 1
+            self._mask[..., :w, -h:] = 1
+            self._mask[..., -w:, :h] = 1
+        return self._mask
 
     def apply_perturbation(self, image: torch.Tensor, perturbation: torch.Tensor):
         """
@@ -77,46 +116,9 @@ class Constraint:
         perturb = perturbation.expand_as(image).to(image.device)
         # Make a copy of the image to avoid modifying the original
         perturbed_image = image.clone()
-
-        if self.mode == "pixel":
-            # Simply add the perturbation to the entire image
-            self.mask = torch.zeros_like(image)
-
-        elif self.mode == "patch":
-            # Create a mask for the patch
-            self.mask = torch.zeros_like(image)
-            x, y = self.patch_location
-            w, h = self.patch_size
-            if self.ref_size is not None:
-                x = x * image.shape[-1] // self.ref_size
-                y = y * image.shape[-2] // self.ref_size
-                w = w * image.shape[-1] // self.ref_size
-                h = h * image.shape[-2] // self.ref_size
-            self.mask[..., y : y + h, x : x + w] = 1
-
-        elif self.mode == "frame":
-            # Create a mask for the frame
-            self.mask = torch.ones_like(image)
-            w = self.frame_width
-            h = self.frame_width
-            if self.ref_size is not None:
-                w = w * image.shape[-1] // self.ref_size
-                h = h * image.shape[-2] // self.ref_size
-            self.mask[..., w:-w, h:-h] = 0
-
-        elif self.mode == "corner":
-            self.mask = torch.zeros_like(image)
-            w, h = self.patch_size
-            if self.ref_size is not None:
-                w = w * image.shape[-1] // self.ref_size
-                h = h * image.shape[-2] // self.ref_size
-            self.mask[..., :w, :h] = 1
-            self.mask[..., -w:, -h:] = 1
-            self.mask[..., :w, -h:] = 1
-            self.mask[..., -w:, :h] = 1
-
+        _mask = self.get_mask(image)
         # Apply the perturbation only to the frame area
-        perturbed_image = perturbed_image * (1 - self.mask) + perturb * self.mask
+        perturbed_image = perturbed_image * (1 - _mask) + perturb * _mask
         # Ensure the resulting image has valid pixel values (assuming 0-1 range)
         # perturbed_image = torch.clamp(perturbed_image, self.bound[0], self.bound[1])
         if self.mode == "pixel":

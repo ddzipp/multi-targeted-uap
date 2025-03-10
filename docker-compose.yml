@@ -2,15 +2,17 @@ version: '3.8'
 
 services:
   lcy_dev:
-    image: huggingface/transformers-no-delete
+    image: huggingface/transformers-pytorch-gpu
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+    shm_size: '16g'
     ports:
       - "10086:22"
     volumes:
       - /mnt/nfs/lcy/.cache:/root/.cache
       - /mnt/nfs/lcy/research:/root/research
+      - /mnt/nfs/lcy/apt_cache:/var/cache/apt/archives
     tty: true
     stdin_open: true
     restart: always

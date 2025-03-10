@@ -1,10 +1,12 @@
 import os
 
 import torch
+from accelerate import Accelerator
 from torch.utils.data import Subset
 from tqdm import tqdm
 
 from attacks.base import Attacker
+from attacks.split import SplitAttacker, SplitConstraint
 from config import Config
 from dataset import collate_fn, load_dataset
 from dataset.base import VisionData
@@ -28,7 +30,7 @@ def attack_dataloader(dataset_name: str, sample_id, targets, transform=None):
     dataset = torch.utils.data.ConcatDataset(datasets)
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=1,
+        batch_size=10,
         shuffle=True,
         collate_fn=collate_fn,
     )
@@ -40,15 +42,28 @@ def main():
     cfg = Config()
     model = get_model(cfg.model_name)
     dataloader = attack_dataloader(cfg.dataset_name, cfg.sample_id, cfg.targets)
-    constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width, ref_size=299)
-    attacker = Attacker(model, constraint, cfg)
+    if cfg.attack_name == "split":
+        constraint = SplitConstraint(
+            mode=cfg.attack_mode,
+            frame_width=cfg.frame_width,
+            ref_size=299,
+            num_targets=len(cfg.targets),
+        )
+        attacker = SplitAttacker(model, constraint, cfg.lr, cfg.on_normalized)
+    elif cfg.attack_name == "base":
+        constraint = Constraint(
+            cfg.attack_mode, frame_width=cfg.frame_width, ref_size=299
+        )
+        attacker = Attacker(model, constraint, cfg.lr, cfg.on_normalized)
+    else:
+        raise ValueError(f"Attack name {cfg.attack_name} not supported")
     run = WBLogger(
-        project="VLM_batch_test",
+        project="split_attack_test",
         config=cfg,
-        name="batch=1",
+        name="batch=10",
     ).run
-    # accelerator = Accelerator()
-    # model, dataloader = accelerator.prepare(model, dataloader)
+    accelerator = Accelerator()
+    model, dataloader = accelerator.prepare(model, dataloader)
     try:
         # train loop
         with tqdm(range(cfg.epoch)) as pbar:
@@ -57,6 +72,8 @@ def main():
                 # attacker.saver(f"./save/{str(i)}_0.pth")
                 run.log({"loss": loss})
                 pbar.set_postfix({"loss": f"{loss:.2f}"})
+                if loss.item() < 0.1:
+                    break
     finally:
         # save perturbation and mask
         attacker.saver(filename := "./save/perturbation.pth")

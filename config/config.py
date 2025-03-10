@@ -2,7 +2,7 @@ import argparse
 from dataclasses import asdict, dataclass
 
 import torch
-import yaml
+import yaml  # type: ignore
 
 
 @dataclass
@@ -16,17 +16,18 @@ class Config:
     # dataset info
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
-    # targets: torch.Tensor = torch.randperm(1000)[:2]
-    targets: tuple = ("WARNING!", "ERROR!")
+    targets: torch.Tensor = torch.randperm(1000)[:2]
+    # targets: tuple = ("WARNING!", "ERROR!")
     sample_id: torch.Tensor = torch.stack(
         [torch.arange(1000 * i, 1000 * i + 30) for i in range(len(targets))]
     )
 
     # model info
+    model_name: str = "resnet50"
     # model_name: str = "llava"
-    model_name: str = "llava"
 
     # attack info
+    attack_name: str = "split"
     optimizer: str = "momentum"
     mu: float = 0.9
     epoch: int = 500
