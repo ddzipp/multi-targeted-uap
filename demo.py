@@ -20,7 +20,6 @@ torch.manual_seed(42)
 
 def attack_dataloader(dataset_name: str, sample_id, targets, transform=None):
     # Set multi-target labels
-    # target0, target1 = "WARNING!", "ERROR!"
     datasets = [
         Subset(
             load_dataset(dataset_name, target=target, transform=transform), sample_id[i]
@@ -62,8 +61,9 @@ def main():
         config=cfg,
         name="batch=10",
     ).run
-    accelerator = Accelerator()
-    model, dataloader = accelerator.prepare(model, dataloader)
+    # TODO: Accelerator is not supported in this version
+    # accelerator = Accelerator()
+    # model, dataloader = accelerator.prepare(model, dataloader)
     try:
         # train loop
         with tqdm(range(cfg.epoch)) as pbar:
@@ -72,12 +72,13 @@ def main():
                 # attacker.saver(f"./save/{str(i)}_0.pth")
                 run.log({"loss": loss})
                 pbar.set_postfix({"loss": f"{loss:.2f}"})
-                if loss.item() < 0.1:
+                if loss < 0.1:
                     break
     finally:
         # save perturbation and mask
         attacker.saver(filename := "./save/perturbation.pth")
         run.save(filename, base_path="save")
+        run.finish()
 
 
 if __name__ == "__main__":

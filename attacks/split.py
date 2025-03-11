@@ -35,18 +35,15 @@ class SplitConstraint(Constraint):
 
     def get_mask(self, image, target: torch.Tensor | int = 0):
         _mask = super().get_mask(image)
+        # support the split-optimization by spliting the width of perturbation
         split_width = _mask.shape[-1] // self.num_targets
-        # Handle batch dimension
-        # 计算每个batch的左右边界
+        # calc the left and right bound
         l = split_width * target
         r = split_width * (target + 1)
-
-        # 创建索引张量
-        batch_idx = torch.arange(image.shape[0], device=image.device)[:, None]
-        width_idx = torch.arange(image.shape[-1], device=image.device)[None, :]
+        batch_idx = torch.arange(image.shape[0])[:, None]
+        width_idx = torch.arange(image.shape[-1])[None, :]
         condition = (width_idx >= l[:, None]) & (width_idx < r[:, None])
-        # 使用布尔索引设置mask值为0
-        _mask[batch_idx, ..., width_idx] *= condition[..., None, None]
+        _mask[batch_idx, ..., width_idx] *= condition[..., None, None].to(_mask.device)
         return _mask
 
     def apply_perturbation(self, image, perturbation, target=0):

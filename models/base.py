@@ -64,7 +64,7 @@ class Model(ABC):
         if normalized:
             min_values = ((torch.zeros(3) - self.mean) / self.std).view(3, 1, 1)
             max_values = ((torch.ones(3) - self.mean) / self.std).view(3, 1, 1)
-            return torch.clamp(image, min_values, max_values)
+            return image.clip(min_values.to(image.device), max_values.to(image.device))
         return torch.clamp(image, 0, 1)
 
     @abstractmethod
@@ -182,12 +182,12 @@ class TimmModel(Model):
         self._resize_image = transform.transforms[0]
 
     @property
-    def mean(self):
-        return torch.tensor(self._mean)
+    def mean(self) -> torch.Tensor:
+        return self._mean
 
     @property
-    def std(self):
-        return torch.tensor(self._std)
+    def std(self) -> torch.Tensor:
+        return self._std
 
     def resize_image(self, image):
         return self._resize_image(image)
