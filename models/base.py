@@ -60,12 +60,12 @@ class Model(ABC):
         inv_std = torch.tensor([1 / s for s in self.std])
         return transforms.Normalize(inv_mean, inv_std)(image)
 
-    def clip_image(self, image, normalized=True):
+    def clip_image(self, image: torch.Tensor, normalized=True):
         if normalized:
             min_values = ((torch.zeros(3) - self.mean) / self.std).view(3, 1, 1)
             max_values = ((torch.ones(3) - self.mean) / self.std).view(3, 1, 1)
             return image.clip(min_values.to(image.device), max_values.to(image.device))
-        return torch.clamp(image, 0, 1)
+        return image.clip(0, 1)
 
     @abstractmethod
     def resize_image(self, image):

@@ -23,13 +23,10 @@ class Config:
     )
 
     # model info
-    model_name: str = "resnet50"
-    # model_name: str = "llava"
+    model_name: str = "resnet50"  # renset50, llava
 
     # attack info
-    attack_name: str = "split"
-    optimizer: str = "momentum"
-    mu: float = 0.9
+    attack_name: str = "union_split"  # base, split, union_split
     epoch: int = 500
     lr: float = 0.1
     attack_mode: str = "frame"

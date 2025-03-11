@@ -5,13 +5,10 @@ from accelerate import Accelerator
 from torch.utils.data import Subset
 from tqdm import tqdm
 
-from attacks.base import Attacker
-from attacks.split import SplitAttacker, SplitConstraint
+from attacks import get_attacker
 from config import Config
 from dataset import collate_fn, load_dataset
-from dataset.base import VisionData
 from models import get_model
-from utils.constraint import Constraint
 from utils.logger import WBLogger
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4"
@@ -41,25 +38,11 @@ def main():
     cfg = Config()
     model = get_model(cfg.model_name)
     dataloader = attack_dataloader(cfg.dataset_name, cfg.sample_id, cfg.targets)
-    if cfg.attack_name == "split":
-        constraint = SplitConstraint(
-            mode=cfg.attack_mode,
-            frame_width=cfg.frame_width,
-            ref_size=299,
-            num_targets=len(cfg.targets),
-        )
-        attacker = SplitAttacker(model, constraint, cfg.lr, cfg.on_normalized)
-    elif cfg.attack_name == "base":
-        constraint = Constraint(
-            cfg.attack_mode, frame_width=cfg.frame_width, ref_size=299
-        )
-        attacker = Attacker(model, constraint, cfg.lr, cfg.on_normalized)
-    else:
-        raise ValueError(f"Attack name {cfg.attack_name} not supported")
+    attacker = get_attacker(cfg, model)
     run = WBLogger(
         project="split_attack_test",
         config=cfg,
-        name="batch=10",
+        name="union_split_test",
     ).run
     # TODO: Accelerator is not supported in this version
     # accelerator = Accelerator()

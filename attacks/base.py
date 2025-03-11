@@ -6,22 +6,29 @@ import torch
 from config.config import Config
 from models.base import Model
 from utils.constraint import Constraint
-from utils.optimizer import Optimizer
+
+# from utils.optimizer import MomentumOptimizer
 
 
 class Attacker:
 
     def __init__(
-        self, model: Model, constraint: Constraint, lr=0.1, on_normalized=True
+        self,
+        model: Model,
+        constraint: Constraint,
+        lr=0.1,
+        on_normalized=True,
+        momentum=0.9,
     ):
         super().__init__()
         self.model = model
-        self.momentum = torch.tensor(0)
         self.constraint = constraint
         self.pert = torch.rand([3, 299, 299])
         self.lr = lr
+        self.velocity = torch.zeros_like(self.pert)
+        self.momentum = momentum
         self.on_normalized = on_normalized
-        # self.optimizer = Optimizer([perturbation], method="adam", lr=1.0)
+        # self.optimizer = MomentumOptimizer([self.pert], lr=lr, momentum=0.9)
 
     def get_inputs(
         self,
@@ -53,24 +60,31 @@ class Attacker:
                 self.pert = torch.rand_like(
                     inputs["pixel_values"][0], requires_grad=True
                 )
+                self.velocity = torch.zeros_like(self.pert)
+                # self.optimizer = MomentumOptimizer(
+                #     [self.pert], lr=self.lr, momentum=self.momentum
+                # )
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)
         inputs["pixel_values"] = self.model.clip_image(
             inputs["pixel_values"], normalized=self.on_normalized
         )
         return inputs, target
 
+    def step(self, grad):
+        self.velocity = self.momentum * self.velocity + grad / torch.norm(grad, p=1)
+        self.pert = self.pert - self.lr * self.velocity.sign()
+        self.pert = self.model.clip_image(self.pert, normalized=self.on_normalized)
+
     def trainer(self, dataloader) -> float:
         total_loss = 0
         for item in dataloader:
+            # self.optimizer.zero_grad()
             self.pert = self.pert.detach().requires_grad_()
             inputs, target = self.get_inputs(**item)
             loss = self.model.calc_loss(inputs, target)
             loss.backward()
-            # optimizer.step()
-            grad = self.pert.grad
-            self.momentum = self.lr * self.momentum + grad / torch.norm(grad, p=1)
-            self.pert = self.pert - self.lr * self.momentum.sign()
-            self.pert = self.model.clip_image(self.pert, normalized=self.on_normalized)
+            # self.optimizer.step()
+            self.step(self.pert.grad)
             total_loss += loss.item()
         return total_loss / len(dataloader)
 
