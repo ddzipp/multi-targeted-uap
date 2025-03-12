@@ -15,7 +15,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 torch.manual_seed(42)
 
 
-def attack_dataloader(name: str, sample_id, targets, transform=None, split="val"):
+def attack_dataloader(name: str, sample_id, targets, split="val", transform=None):
     # Set multi-target labels
     datasets = [
         Subset(
@@ -39,13 +39,13 @@ def main():
     cfg = Config()
     model = get_model(cfg.model_name)
     dataloader = attack_dataloader(
-        cfg.dataset_name, cfg.sample_id, cfg.targets, cfg.split
+        cfg.dataset_name, cfg.sample_id, cfg.targets, split=cfg.split
     )
     attacker = get_attacker(cfg, model)
     run = WBLogger(
-        project="generability_test",
+        project="attack_mode_test",
         config=cfg,
-        name="train_20_imgs",
+        name="pixel_16/255",
     ).run
     # TODO: Accelerator is not supported in this version
     # accelerator = Accelerator()

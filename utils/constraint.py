@@ -21,50 +21,34 @@ class Constraint:
         self,
         mode: str = "frame",
         *,
-        epsilon: float = 1.0,
-        norm_type: str = "linf",
         frame_width: int = 6,
         patch_size: tuple = (40, 40),
         patch_location: tuple = (0, 0),
-        bound: tuple = (0.0, 1.0),
         ref_size: int | None = None,
     ) -> None:
         """
-        Initialize the constraint.
+            Initialize the constraint.
 
-        Args:
-            mode (str): Mode for perturbation ('pixel', 'patch', 'frame', or 'corner')
-            epsilon (float): Maximum perturbation magnitude
-            norm_type (str): Type of norm ('linf', 'l2', 'l1')
-            patch_size (tuple): (width, height) of the patch
-            patch_location (tuple): (x, y) is top-left corner of the patch
-            frame_width (int, optional): Width of the frame for frame mode
+            Args:
+                mode (str): Mode for perturbation ('pixel', 'patch', 'frame', or 'corner')
+                epsilon (float): Maximum perturbation magnitude
+                norm_type (str): Type of norm ('linf', 'l2', 'l1')
+                patch_size (tuple): (width, height) of the patch
+                patch_location (tuple): (x, y) is top-left corner of the patch
+                frame_width (int, optional): Width of the frame for frame mode
         """
         self.mode = mode.lower()
-        self.epsilon = epsilon
-        self.norm_type = norm_type
         self.patch_size = patch_size
         self.patch_location = patch_location
         self.frame_width = frame_width
-        self.bound = bound
         self.ref_size = ref_size
         # Validate inputs
         self._mask: torch.Tensor = torch.zeros(1)
 
-        if mode != "pixel":
-            self.norm_type = "linf"
-            self.epsilon = 1.0
-        self.distance = get_distance(self.norm_type)
-
-    def clip_perturbation(self, perturbation, original):
-        return self.distance.clip_perturbation(
-            perturbation, epsilon=self.epsilon, references=original
-        )
-
     def get_mask(self, image):
         if self.mode == "pixel":
             # Simply add the perturbation to the entire image
-            self._mask = torch.zeros_like(image)
+            self._mask = torch.ones_like(image)
 
         elif self.mode == "patch":
             # Create a mask for the patch
@@ -119,10 +103,6 @@ class Constraint:
         _mask = self.get_mask(image)
         # Apply the perturbation only to the frame area
         perturbed_image = perturbed_image * (1 - _mask) + perturb * _mask
-        # Ensure the resulting image has valid pixel values (assuming 0-1 range)
-        # perturbed_image = torch.clamp(perturbed_image, self.bound[0], self.bound[1])
-        if self.mode == "pixel":
-            perturbed_image = self.clip_perturbation(perturbed_image, image)
         return perturbed_image
 
     def __call__(self, image, perturbation):

@@ -16,11 +16,11 @@ class Config:
     # dataset info
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
-    split: str = "test"
-    targets: torch.Tensor = torch.tensor([246, 573])
+    split: str = "val"
+    targets: torch.Tensor = torch.randperm(1000)[:2]
     # targets: tuple = ("WARNING!", "ERROR!")
     sample_id: torch.Tensor = torch.stack(
-        [torch.arange(20), torch.arange(10150, 10170)]
+        [torch.arange(1000 * i, 1000 * i + 30) for i in range(len(targets))]
     )
 
     # model info
@@ -29,10 +29,9 @@ class Config:
     # attack info
     attack_name: str = "base"  # base, split, union_split
     epoch: int = 500
-    lr: float = 0.1
-    attack_mode: str = "frame"
-    norm_type: str = "linf"
-    norm_epsilon: float = 1.0
+    lr: float = 0.01
+    attack_mode: str = "pixel"
+    bound: tuple = (-16 / 255, 16 / 255)
     frame_width: int = 6
     patch_size: int = 40
     patch_location: tuple = (0, 0)

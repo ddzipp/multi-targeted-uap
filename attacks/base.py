@@ -19,6 +19,7 @@ class Attacker:
         lr=0.1,
         on_normalized=True,
         momentum=0.9,
+        bound: tuple = (0, 1),
     ):
         super().__init__()
         self.model = model
@@ -28,6 +29,7 @@ class Attacker:
         self.velocity = torch.zeros_like(self.pert)
         self.momentum = momentum
         self.on_normalized = on_normalized
+        self.bound = bound
         # self.optimizer = MomentumOptimizer([self.pert], lr=lr, momentum=0.9)
 
     def get_inputs(
@@ -66,14 +68,16 @@ class Attacker:
                 # )
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)
         inputs["pixel_values"] = self.model.clip_image(
-            inputs["pixel_values"], normalized=self.on_normalized
+            inputs["pixel_values"], normalized=self.on_normalized, bound=(0, 1)
         )
         return inputs, target
 
     def step(self, grad):
         self.velocity = self.momentum * self.velocity + grad / torch.norm(grad, p=1)
         self.pert = self.pert - self.lr * self.velocity.sign()
-        self.pert = self.model.clip_image(self.pert, normalized=self.on_normalized)
+        self.pert = self.model.clip_image(
+            self.pert, normalized=self.on_normalized, bound=self.bound
+        )
 
     def trainer(self, dataloader) -> float:
         total_loss = 0
