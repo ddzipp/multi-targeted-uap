@@ -3,7 +3,7 @@ from torchvision import transforms
 
 from dataset.base import AttackDataset
 from dataset.cropa import CropaDataset
-from dataset.imagenet import ImageNetDataset
+from dataset.imagenet import ImageNetDataset, ImageNetTestDataset
 from dataset.vqa import VQADataset
 
 
@@ -23,6 +23,8 @@ def load_dataset(
         )
     if name.lower() == "vqa":
         dataset = VQADataset(path=path, split=split, transform=transform)
+    elif name.lower() == "imagenet" and split == "test":
+        dataset = ImageNetTestDataset(path=path, split="test", transform=transform)
     elif name.lower() == "imagenet":
         dataset = ImageNetDataset(path=path, split=split, transform=transform)
     elif name.lower() == "cropa":

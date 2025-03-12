@@ -5,8 +5,7 @@ import torch
 import yaml  # type: ignore
 
 import wandb
-from attacks.base import Attacker
-from attacks.split import SplitAttacker, SplitConstraint
+from attacks import get_attacker
 from config import Config
 from demo import attack_dataloader
 from models import get_model
@@ -14,7 +13,7 @@ from utils.constraint import Constraint
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/split_attack_test/63ou6xcs"
+run_path = "lichangyue/generability_test/y8j5mabv"
 run = api.run(run_path)
 config = json.loads(run.json_config)
 file = run.file("perturbation.pth").download(root="./save", replace=True, exist_ok=True)
@@ -44,15 +43,7 @@ def evaluate(cfg):
     dataset = dataloader.dataset
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=30, shuffle=False)
 
-    # constraint = Constraint(cfg.attack_mode, frame_width=cfg.frame_width, ref_size=299)
-    # attacker = Attacker(model, constraint, cfg)
-    constraint = SplitConstraint(
-        mode=cfg.attack_mode,
-        frame_width=cfg.frame_width,
-        ref_size=299,
-        num_targets=len(cfg.targets),
-    )
-    attacker = SplitAttacker(model, constraint, cfg.lr, cfg.on_normalized)
+    attacker = get_attacker(cfg, model)
     attacker.pert = results["perturbation"]
 
     asr = 0.0
@@ -82,6 +73,6 @@ def evaluate(cfg):
 asr, acc, loss = evaluate(cfg)
 run.summary.update({"Train_ASR": asr, "Train_ACC": acc, "Train_Loss": loss})
 
-cfg.sample_id = (cfg.sample_id + 30)[:, :20]
+cfg.sample_id = (cfg.sample_id + 80)[:, :20]
 asr, acc, loss = evaluate(cfg)
 run.summary.update({"Test_ASR": asr, "Test_ACC": acc, "Test_Loss": loss})

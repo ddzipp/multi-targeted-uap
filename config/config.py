@@ -16,17 +16,18 @@ class Config:
     # dataset info
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
-    targets: torch.Tensor = torch.randperm(1000)[:2]
+    split: str = "test"
+    targets: torch.Tensor = torch.tensor([246, 573])
     # targets: tuple = ("WARNING!", "ERROR!")
     sample_id: torch.Tensor = torch.stack(
-        [torch.arange(1000 * i, 1000 * i + 30) for i in range(len(targets))]
+        [torch.arange(20), torch.arange(10150, 10170)]
     )
 
     # model info
     model_name: str = "resnet50"  # renset50, llava
 
     # attack info
-    attack_name: str = "union_split"  # base, split, union_split
+    attack_name: str = "base"  # base, split, union_split
     epoch: int = 500
     lr: float = 0.1
     attack_mode: str = "frame"
