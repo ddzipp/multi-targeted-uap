@@ -13,7 +13,7 @@ from utils.constraint import Constraint
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/attack_mode_test/4yl50hgb"
+run_path = "lichangyue/attack_mode_test/tauxih5q"
 run = api.run(run_path)
 config = json.loads(run.json_config)
 file = run.file("perturbation.pth").download(root="./save", replace=True, exist_ok=True)

@@ -2,6 +2,7 @@ import os
 import warnings
 
 import torch
+from torch import nn
 
 from config.config import Config
 from models.base import Model
@@ -34,24 +35,25 @@ class Attacker:
 
     def get_inputs(
         self,
-        image: torch.Tensor,
-        target: list,
-        question: list,
-        label=None,
-        answer=None,
+        images: torch.Tensor,
+        targets: list,
+        questions: list,
+        labels=None,
+        answers=None,
         generation=False,
-    ) -> torch.Tensor:
+    ):
         # add perturbation to pixel_values
-        perturbed_image = (
-            image if self.on_normalized else self.constraint(image, self.pert)
-        )
+        mask = self.constraint.init_mask(images)
+        if not self.on_normalized:
+            images = self.constraint(images, self.pert)
 
-        inputs, target = self.model.generate_inputs(
-            perturbed_image,
-            targets=target,
-            questions=question,
+        inputs, label_ids = self.model.generate_inputs(
+            images,
+            targets=targets,
+            questions=questions,
             generation=generation,
         )
+
         # add perturbation to pixel_values
         if self.on_normalized:
             if self.pert.shape[-2:] != inputs["pixel_values"].shape[-2:]:
@@ -59,10 +61,10 @@ class Attacker:
                     "The shape of perturbation is not equal to the shape of image, "
                     "Re-init the perturbation."
                 )
-                self.pert = torch.rand_like(
-                    inputs["pixel_values"][0], requires_grad=True
-                )
+                self.constraint._mask = self.model.image_preprocess(mask).to(float)
+                self.pert = torch.rand_like(self.constraint._mask, requires_grad=True)
                 self.velocity = torch.zeros_like(self.pert)
+
                 # self.optimizer = MomentumOptimizer(
                 #     [self.pert], lr=self.lr, momentum=self.momentum
                 # )
@@ -70,7 +72,7 @@ class Attacker:
         inputs["pixel_values"] = self.model.clip_image(
             inputs["pixel_values"], normalized=self.on_normalized, bound=(0, 1)
         )
-        return inputs, target
+        return inputs.to("cuda"), label_ids.to("cuda")
 
     def step(self, grad):
         self.velocity = self.momentum * self.velocity + grad / torch.norm(grad, p=1)
@@ -84,8 +86,8 @@ class Attacker:
         for item in dataloader:
             # self.optimizer.zero_grad()
             self.pert = self.pert.detach().requires_grad_()
-            inputs, target = self.get_inputs(**item)
-            loss = self.model.calc_loss(inputs, target)
+            inputs, targets = self.get_inputs(**item)
+            loss = self.model.calc_loss(inputs, targets)
             loss.backward()
             # self.optimizer.step()
             self.step(self.pert.grad)

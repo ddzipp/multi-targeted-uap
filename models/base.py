@@ -62,12 +62,8 @@ class Model(ABC):
 
     def clip_image(self, image: torch.Tensor, normalized=True, bound=(0, 1)):
         if normalized:
-            min_values = ((torch.ones(3) * bound[0] - self.mean) / self.std).view(
-                3, 1, 1
-            )
-            max_values = ((torch.ones(3) * bound[1] - self.mean) / self.std).view(
-                3, 1, 1
-            )
+            min_values = ((torch.ones(3) * bound[0] - self.mean) / self.std).max()
+            max_values = ((torch.ones(3) * bound[1] - self.mean) / self.std).min()
             return image.clip(min_values.to(image.device), max_values.to(image.device))
         return image.clip(bound[0], bound[1])
 
@@ -81,6 +77,10 @@ class Model(ABC):
 
     @abstractmethod
     def generate_inputs(self, image, *, questions, targets, generation=False):
+        pass
+
+    @abstractmethod
+    def image_preprocess(self, image):
         pass
 
 
@@ -158,11 +158,17 @@ class VisualLanguageModel(Model):
         )
         label_ids = inputs["input_ids"].clone()
         colons_poision = torch.where(label_ids == colon_ids)[-1][1::2] + 1
-        label_ids[
-            torch.arange(label_ids.shape[1])[None, :] <= colons_poision[:, None]
-        ] = -100
+        # label_ids[
+        #     torch.arange(label_ids.shape[1])[None, :] <= colons_poision[:, None]
+        # ] = -100
+        label_ids[:, :-10] = -100
 
         return inputs, label_ids
+
+    def image_preprocess(self, image):
+        return self.processor.image_processor(
+            image, return_tensors="pt", do_rescale=False, do_normalize=False
+        )["pixel_values"]
 
 
 class TimmModel(Model):
@@ -205,3 +211,7 @@ class TimmModel(Model):
     def generate_inputs(self, image, *, questions, targets, generation=False):
         processed_image = self.transform(image)
         return {"pixel_values": processed_image}, torch.tensor(targets)
+
+    def image_preprocess(self, image):
+        transform = transforms.Compose(self.transform.transforms[:-1])
+        return transform(image)

@@ -27,15 +27,15 @@ class Constraint:
         ref_size: int | None = None,
     ) -> None:
         """
-            Initialize the constraint.
+        Initialize the constraint.
 
-            Args:
-                mode (str): Mode for perturbation ('pixel', 'patch', 'frame', or 'corner')
-                epsilon (float): Maximum perturbation magnitude
-                norm_type (str): Type of norm ('linf', 'l2', 'l1')
-                patch_size (tuple): (width, height) of the patch
-                patch_location (tuple): (x, y) is top-left corner of the patch
-                frame_width (int, optional): Width of the frame for frame mode
+        Args:
+            mode (str): Mode for perturbation ('pixel', 'patch', 'frame', or 'corner')
+            epsilon (float): Maximum perturbation magnitude
+            norm_type (str): Type of norm ('linf', 'l2', 'l1')
+            patch_size (tuple): (width, height) of the patch
+            patch_location (tuple): (x, y) is top-left corner of the patch
+            frame_width (int, optional): Width of the frame for frame mode
         """
         self.mode = mode.lower()
         self.patch_size = patch_size
@@ -43,9 +43,15 @@ class Constraint:
         self.frame_width = frame_width
         self.ref_size = ref_size
         # Validate inputs
-        self._mask: torch.Tensor = torch.zeros(1)
+        self._mask: torch.Tensor = None
 
-    def get_mask(self, image):
+    def init_mask(self, images):
+        if self._mask is not None:
+            return self._mask
+        else:
+            return self.get_mask(images[0])
+
+    def get_mask(self, image) -> torch.Tensor:
         if self.mode == "pixel":
             # Simply add the perturbation to the entire image
             self._mask = torch.ones_like(image)
@@ -82,7 +88,7 @@ class Constraint:
             self._mask[..., -w:, -h:] = 1
             self._mask[..., :w, -h:] = 1
             self._mask[..., -w:, :h] = 1
-        return self._mask
+        return self._mask.unsqueeze(0)
 
     def apply_perturbation(self, image: torch.Tensor, perturbation: torch.Tensor):
         """
@@ -95,12 +101,13 @@ class Constraint:
         Returns:
             torch.Tensor: Perturbed image(s)
         """
-        assert image.shape[-2:] == perturbation.shape[-2:]
+        assert self._mask is not None
+        r = (image.shape[0] // self._mask.shape[0],) + (1,) * (image.ndim - 1)
         # Repeat the perturbation to the same shape of the image
-        perturb = perturbation.expand_as(image).to(image.device)
+        perturb = perturbation.repeat(r).to(image.device)
+        _mask = self._mask.repeat(r).to(image.device)
         # Make a copy of the image to avoid modifying the original
         perturbed_image = image.clone()
-        _mask = self.get_mask(image)
         # Apply the perturbation only to the frame area
         perturbed_image = perturbed_image * (1 - _mask) + perturb * _mask
         return perturbed_image

@@ -14,7 +14,9 @@ def get_attacker(cfg: Config, model) -> Attacker:
             patch_size=cfg.patch_size,
             ref_size=299,
         )
-        attacker = Attacker(model, constraint, cfg.lr, cfg.on_normalized, bound=cfg.bound)
+        attacker = Attacker(
+            model, constraint, cfg.lr, cfg.on_normalized, bound=cfg.bound
+        )
     elif cfg.attack_name == "split":
         constraint = SplitConstraint(
             mode=cfg.attack_mode,

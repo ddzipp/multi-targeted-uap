@@ -43,9 +43,9 @@ def collate_fn(batch):
     targets = [item["target"] for item in batch]
 
     return {
-        "image": images,
-        "label": labels,
-        "question": questions,
-        "answer": answers,
-        "target": targets,
+        "images": images,
+        "labels": labels,
+        "questions": questions,
+        "answers": answers,
+        "targets": targets,
     }

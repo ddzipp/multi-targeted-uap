@@ -17,24 +17,25 @@ class Config:
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
     split: str = "val"
-    targets: torch.Tensor = torch.randperm(1000)[:2]
-    # targets: tuple = ("WARNING!", "ERROR!")
+    # targets: torch.Tensor = torch.randperm(1000)[:2]
+    targets: tuple = ("WARNING!", "ERROR!")
     sample_id: torch.Tensor = torch.stack(
         [torch.arange(1000 * i, 1000 * i + 30) for i in range(len(targets))]
     )
 
     # model info
-    model_name: str = "resnet50"  # renset50, llava
+    model_name: str = "Qwen"  # renset50, llava
 
     # attack info
     attack_name: str = "base"  # base, split, union_split
+    lr: float = 0.1
     epoch: int = 500
-    lr: float = 0.01
-    attack_mode: str = "pixel"
-    bound: tuple = (-16 / 255, 16 / 255)
+    attack_mode: str = "frame"
+    bound: tuple = (0, 1)
+    # bound: tuple = (-16 / 255, 16 / 255)
     frame_width: int = 6
-    patch_size: int = 40
-    patch_location: tuple = (0, 0)
+    patch_size: tuple[int, int] = (40, 40)
+    patch_location: tuple[int, int] = (0, 0)
     on_normalized: bool = True
 
     def asdict(self):
