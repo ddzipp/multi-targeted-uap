@@ -56,7 +56,7 @@ class Attacker:
 
         # add perturbation to pixel_values
         if self.on_normalized:
-            if self.pert.shape[-2:] != inputs["pixel_values"].shape[-2:]:
+            if self.pert.shape[-1] != inputs["pixel_values"].shape[-1]:
                 warnings.warn(
                     "The shape of perturbation is not equal to the shape of image, "
                     "Re-init the perturbation."

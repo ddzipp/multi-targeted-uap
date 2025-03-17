@@ -1,6 +1,11 @@
 import torch
 from PIL.Image import Image
-from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
+from transformers import (
+    AutoProcessor,
+    AutoTokenizer,
+    Qwen2_5_VLForConditionalGeneration,
+    Qwen2VLForConditionalGeneration,
+)
 
 from models.base import RegisterModel, VisualLanguageModel
 
@@ -38,3 +43,18 @@ class Qwen(VisualLanguageModel):
     @property
     def model(self):
         return self._model
+
+
+class Qwen2__5(Qwen):
+    model_id = "Qwen/Qwen2.5-VL-3B-Instruct"
+
+    def __init__(self, device="auto", torch_dtype="float16"):
+        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            self.model_id,
+            device_map="auto",
+        )
+        self._processor = AutoProcessor.from_pretrained(self.model_id)
+        self.tokenizer = self.processor.tokenizer
+        self.lm_embeds = self.model.get_input_embeddings()
+        self.image_processor = self.processor.image_processor
+        self.device = "cuda" if device == "auto" else device

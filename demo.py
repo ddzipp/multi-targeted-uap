@@ -11,7 +11,7 @@ from dataset import collate_fn, load_dataset
 from models import get_model
 from utils.logger import WBLogger
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 torch.manual_seed(42)
 
 
@@ -27,7 +27,7 @@ def attack_dataloader(name: str, sample_id, targets, split="val", transform=None
     dataset = torch.utils.data.ConcatDataset(datasets)
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=1,
+        batch_size=5,
         shuffle=True,
         collate_fn=collate_fn,
     )
@@ -45,7 +45,7 @@ def main():
     run = WBLogger(
         project="qwen-test",
         config=cfg,
-        name="union_split_test_w18",
+        name="debug_test",
     ).run
     # TODO: Accelerator is not supported in this version
     # accelerator = Accelerator()

@@ -28,7 +28,7 @@ class Config:
 
     # attack info
     attack_name: str = "base"  # base, split, union_split
-    lr: float = 0.1
+    lr: float = 0.01
     epoch: int = 500
     attack_mode: str = "frame"
     bound: tuple = (0, 1)
