@@ -22,13 +22,13 @@ class Config:
     sample_id: torch.Tensor = torch.stack(
         [torch.arange(1000 * i, 1000 * i + 30) for i in range(len(targets))]
     )
-
+    batch_size: int = 5
     # model info
     model_name: str = "Qwen"  # renset50, llava
 
     # attack info
     attack_name: str = "base"  # base, split, union_split
-    lr: float = 0.05
+    lr: float = 0.01 * batch_size
     epoch: int = 500
     attack_mode: str = "frame"
     bound: tuple = (0, 1)

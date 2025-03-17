@@ -16,7 +16,13 @@ torch.manual_seed(42)
 
 
 def attack_dataloader(
-    name: str, sample_id, targets, split="val", transform=None, shuffle=True
+    name: str,
+    sample_id,
+    targets,
+    split="val",
+    transform=None,
+    shuffle=True,
+    batch_size=5,
 ):
     # Set multi-target labels
     datasets = [
@@ -29,7 +35,7 @@ def attack_dataloader(
     dataset = torch.utils.data.ConcatDataset(datasets)
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=5,
+        batch_size=batch_size,
         shuffle=shuffle,
         collate_fn=collate_fn,
     )
@@ -41,7 +47,11 @@ def main():
     cfg = Config()
     model = get_model(cfg.model_name)
     dataloader = attack_dataloader(
-        cfg.dataset_name, cfg.sample_id, cfg.targets, split=cfg.split
+        cfg.dataset_name,
+        cfg.sample_id,
+        cfg.targets,
+        split=cfg.split,
+        batch_size=cfg.batch_size,
     )
     attacker = get_attacker(cfg, model)
     run = WBLogger(

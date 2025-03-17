@@ -215,7 +215,10 @@ class TimmModel(Model):
         return {"pixel_values": processed_image}, torch.tensor(targets)
 
     def image_preprocess(self, image, do_normalize=True):
-        transform = self.transform if do_normalize else self.transform.transforms[:-1]
+        transform = self.transform
+        if not do_normalize:
+            transform = transform.transforms[:-1]
+            transform = transforms.Compose(transform)
         return transform(image)
 
     def forward(self, inputs):

@@ -29,7 +29,8 @@ results = torch.load(file.name)
 
 
 config = {key: value["value"] for key, value in config.items() if key != "_wandb"}
-cfg = Config(**config)
+cfg = Config()
+cfg.__dict__.update(config)
 
 # Test on the training set or the test set
 cfg.sample_id = torch.tensor(

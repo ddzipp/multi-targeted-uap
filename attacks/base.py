@@ -37,7 +37,11 @@ class Attacker:
         mask = self.constraint.get_mask(self.ref_shape)
         if self.on_normalized:
             self.pert = self.model.image_preprocess(self.pert)
-            self.constraint._mask = self.model.image_preprocess(mask, False)
+            if self.pert.ndim == 4:
+                # generate mask directly with new shape
+                self.constraint.get_mask(self.pert.shape)
+            else:  # let the mask go through the same image_preprocess
+                self.constraint._mask = self.model.image_preprocess(mask, False)
             # init clip bound for normalized pixel_values
             lower, upper = self.bound
             min_values = lower * torch.ones(self.ref_shape)
@@ -79,7 +83,7 @@ class Attacker:
         if self.on_normalized:
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)
         inputs["pixel_values"] = self.clip_image(inputs["pixel_values"])
-        return inputs.to("cuda"), label_ids.to("cuda")
+        return inputs, label_ids
 
     def step(self, grad):
         self.velocity = self.momentum * self.velocity + grad / torch.norm(grad, p=1)
