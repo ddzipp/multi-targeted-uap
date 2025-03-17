@@ -49,10 +49,12 @@ class SplitConstraint(Constraint):
 class SplitAttacker(Attacker):
     constraint: SplitConstraint
 
-    def get_inputs(
+    def get_adv_inputs(
         self, image, target: list, question, label=None, answer=None, generation=False
     ) -> torch.Tensor:
         # add split mask to pixel_values
         self.constraint.target = target
-        inputs = super().get_inputs(image, target, question, label, answer, generation)
+        inputs = super().get_adv_inputs(
+            image, target, question, label, answer, generation
+        )
         return inputs

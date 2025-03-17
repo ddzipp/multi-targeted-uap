@@ -24,7 +24,7 @@ class Constraint:
         frame_width: int = 6,
         patch_size: tuple = (40, 40),
         patch_location: tuple = (0, 0),
-        ref_size: int | None = None,
+        ref_size: int = 299,
     ) -> None:
         """
         Initialize the constraint.
@@ -43,52 +43,46 @@ class Constraint:
         self.frame_width = frame_width
         self.ref_size = ref_size
         # Validate inputs
-        self._mask: torch.Tensor = None
+        self._mask: torch.Tensor = self.get_mask((1, 3, ref_size, ref_size))
 
-    def init_mask(self, images):
-        if self._mask is not None:
-            return self._mask
-        else:
-            return self.get_mask(images[0])
-
-    def get_mask(self, image) -> torch.Tensor:
+    def get_mask(self, shape) -> torch.Tensor:
         if self.mode == "pixel":
             # Simply add the perturbation to the entire image
-            self._mask = torch.ones_like(image)
+            self._mask = torch.ones(shape)
 
         elif self.mode == "patch":
             # Create a mask for the patch
-            self._mask = torch.zeros_like(image)
+            self._mask = torch.zeros(shape)
             x, y = self.patch_location
             w, h = self.patch_size
             if self.ref_size is not None:
-                x = x * image.shape[-1] // self.ref_size
-                y = y * image.shape[-2] // self.ref_size
-                w = w * image.shape[-1] // self.ref_size
-                h = h * image.shape[-2] // self.ref_size
+                x = x * shape[-1] // self.ref_size
+                y = y * shape[-2] // self.ref_size
+                w = w * shape[-1] // self.ref_size
+                h = h * shape[-2] // self.ref_size
             self._mask[..., y : y + h, x : x + w] = 1
 
         elif self.mode == "frame":
             # Create a mask for the frame
-            self._mask = torch.ones_like(image)
+            self._mask = torch.ones(shape)
             w = self.frame_width
             h = self.frame_width
             if self.ref_size is not None:
-                w = w * image.shape[-1] // self.ref_size
-                h = h * image.shape[-2] // self.ref_size
+                w = w * shape[-1] // self.ref_size
+                h = h * shape[-2] // self.ref_size
             self._mask[..., w:-w, h:-h] = 0
 
         elif self.mode == "corner":
-            self._mask = torch.zeros_like(image)
+            self._mask = torch.zeros(shape)
             w, h = self.patch_size
             if self.ref_size is not None:
-                w = w * image.shape[-1] // self.ref_size
-                h = h * image.shape[-2] // self.ref_size
+                w = w * shape[-1] // self.ref_size
+                h = h * shape[-2] // self.ref_size
             self._mask[..., :w, :h] = 1
             self._mask[..., -w:, -h:] = 1
             self._mask[..., :w, -h:] = 1
             self._mask[..., -w:, :h] = 1
-        return self._mask.unsqueeze(0)
+        return self._mask
 
     def apply_perturbation(self, image: torch.Tensor, perturbation: torch.Tensor):
         """
@@ -101,7 +95,6 @@ class Constraint:
         Returns:
             torch.Tensor: Perturbed image(s)
         """
-        assert self._mask is not None
         r = (image.shape[0] // self._mask.shape[0],) + (1,) * (image.ndim - 1)
         # Repeat the perturbation to the same shape of the image
         perturb = perturbation.repeat(r).to(image.device)

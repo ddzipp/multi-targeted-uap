@@ -47,7 +47,7 @@ def main():
     run = WBLogger(
         project="qwen-test",
         config=cfg,
-        name="debug_test",
+        name="debug2_test",
     ).run
     # TODO: Accelerator is not supported in this version
     # accelerator = Accelerator()
@@ -61,7 +61,7 @@ def main():
                 # attacker.saver(f"./save/{str(i)}_0.pth")
                 run.log({"loss": loss})
                 pbar.set_postfix({"loss": f"{loss:.2f}"})
-                if loss < 0.15:
+                if loss < 0.5:
                     break
     finally:
         # save perturbation and mask

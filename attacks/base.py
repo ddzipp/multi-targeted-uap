@@ -8,8 +8,6 @@ from config.config import Config
 from models.base import Model, TimmModel
 from utils.constraint import Constraint
 
-# from utils.optimizer import MomentumOptimizer
-
 
 class Attacker:
 
@@ -18,22 +16,48 @@ class Attacker:
         model: Model,
         constraint: Constraint,
         lr=0.1,
-        on_normalized=True,
+        on_normalized=True,  # add noise on normalized pixel_values
         momentum=0.9,
         bound: tuple = (0, 1),
+        ref_size=299,
     ):
         super().__init__()
         self.model = model
         self.constraint = constraint
-        self.pert = torch.rand([3, 299, 299])
         self.lr = lr
-        self.velocity = torch.zeros_like(self.pert)
         self.momentum = momentum
         self.on_normalized = on_normalized
         self.bound = bound
-        # self.optimizer = MomentumOptimizer([self.pert], lr=lr, momentum=0.9)
+        self.ref_shape = (1, 3, ref_size, ref_size)
+        self.pert = self.__init_pert__()
+        self.velocity = torch.zeros_like(self.pert)
 
-    def get_inputs(
+    def __init_pert__(self):
+        self.pert = torch.rand(self.ref_shape)
+        mask = self.constraint.get_mask(self.ref_shape)
+        if self.on_normalized:
+            self.pert = self.model.image_preprocess(self.pert)
+            self.constraint._mask = self.model.image_preprocess(mask, False)
+            # init clip bound for normalized pixel_values
+            lower, upper = self.bound
+            min_values = lower * torch.ones(self.ref_shape)
+            max_values = upper * torch.ones(self.ref_shape)
+            min_values = self.model.image_preprocess(min_values)
+            max_values = self.model.image_preprocess(max_values)
+            self.bound = (min_values, max_values)
+        return self.pert
+
+    def clip_image(self, image: torch.Tensor):
+        batch = image.shape[0] // self.pert.shape[0]
+        if not self.on_normalized:
+            return torch.clip(image, *self.bound)
+        else:
+            lower, upper = self.bound
+            lower = lower.repeat((batch,) + (1,) * (image.ndim - 1))
+            upper = upper.repeat((batch,) + (1,) * (image.ndim - 1))
+            return torch.clip(image, lower, upper)
+
+    def get_adv_inputs(
         self,
         images: torch.Tensor,
         targets: list,
@@ -43,52 +67,31 @@ class Attacker:
         generation=False,
     ):
         # add perturbation to pixel_values
-        mask = self.constraint.init_mask(images)
         if not self.on_normalized:
             images = self.constraint(images, self.pert)
-
         inputs, label_ids = self.model.generate_inputs(
             images,
             targets=targets,
             questions=questions,
             generation=generation,
         )
-
-        # add perturbation to pixel_values
+        # add perturbation to normalized pixel_values
         if self.on_normalized:
-            if self.constraint._mask.shape[-1] != inputs["pixel_values"].shape[-1]:
-                self.constraint._mask = self.model.image_preprocess(mask).to(float)
-
-            if self.pert.shape[-1] != inputs["pixel_values"].shape[-1]:
-                warnings.warn(
-                    "The shape of perturbation is not equal to the shape of image, "
-                    "Re-init the perturbation."
-                )
-                self.pert = torch.rand_like(self.constraint._mask, requires_grad=True)
-                self.velocity = torch.zeros_like(self.pert)
-
-                # self.optimizer = MomentumOptimizer(
-                #     [self.pert], lr=self.lr, momentum=self.momentum
-                # )
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)
-        inputs["pixel_values"] = self.model.clip_image(
-            inputs["pixel_values"], normalized=self.on_normalized, bound=(0, 1)
-        )
+        inputs["pixel_values"] = self.clip_image(inputs["pixel_values"])
         return inputs.to("cuda"), label_ids.to("cuda")
 
     def step(self, grad):
         self.velocity = self.momentum * self.velocity + grad / torch.norm(grad, p=1)
         self.pert = self.pert - self.lr * self.velocity.sign()
-        self.pert = self.model.clip_image(
-            self.pert, normalized=self.on_normalized, bound=self.bound
-        )
+        self.pert = self.clip_image(self.pert)
 
     def trainer(self, dataloader) -> float:
         total_loss = 0
         for item in dataloader:
             # self.optimizer.zero_grad()
             self.pert = self.pert.detach().requires_grad_()
-            inputs, targets = self.get_inputs(**item)
+            inputs, targets = self.get_adv_inputs(**item)
             loss = self.model.calc_loss(inputs, targets)
             loss.backward()
             # self.optimizer.step()
@@ -100,7 +103,7 @@ class Attacker:
     def tester(self, dataloader):
         asr = 0
         for item in dataloader:
-            inputs, targets = self.get_inputs(**item, generation=True)
+            inputs, targets = self.get_adv_inputs(**item, generation=True)
             logits = self.model.forward(inputs)
             # label = torch.tensor([int(label) for label in item["label"]], device="cuda")
             if isinstance(self.model, TimmModel):

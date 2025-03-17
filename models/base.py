@@ -60,13 +60,6 @@ class Model(ABC):
         inv_std = torch.tensor([1 / s for s in self.std])
         return transforms.Normalize(inv_mean, inv_std)(image)
 
-    def clip_image(self, image: torch.Tensor, normalized=True, bound=(0, 1)):
-        if normalized:
-            min_values = ((torch.ones(3) * bound[0] - self.mean) / self.std).max()
-            max_values = ((torch.ones(3) * bound[1] - self.mean) / self.std).min()
-            return image.clip(min_values.to(image.device), max_values.to(image.device))
-        return image.clip(bound[0], bound[1])
-
     @abstractmethod
     def resize_image(self, image):
         pass
@@ -80,8 +73,15 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def image_preprocess(self, image):
+    def image_preprocess(self, image, do_normalize=True):
         pass
+
+    @abstractmethod
+    def forward(self, *args, **kwds):
+        pass
+
+    def __call__(self, *args, **kwds):
+        return self.forward(*args, **kwds)
 
 
 class VisualLanguageModel(Model):
@@ -168,9 +168,9 @@ class VisualLanguageModel(Model):
 
         return inputs, label_ids
 
-    def image_preprocess(self, image):
+    def image_preprocess(self, image, do_normalize=True):
         return self.processor.image_processor(
-            image, return_tensors="pt", do_rescale=False, do_normalize=False
+            image, return_tensors="pt", do_rescale=False, do_normalize=do_normalize
         )["pixel_values"]
 
 
@@ -214,8 +214,8 @@ class TimmModel(Model):
         processed_image = self.transform(image)
         return {"pixel_values": processed_image}, torch.tensor(targets)
 
-    def image_preprocess(self, image):
-        transform = transforms.Compose(self.transform.transforms[:-1])
+    def image_preprocess(self, image, do_normalize=True):
+        transform = self.transform if do_normalize else self.transform.transforms[:-1]
         return transform(image)
 
     def forward(self, inputs):
