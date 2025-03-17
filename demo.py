@@ -15,7 +15,9 @@ from utils.logger import WBLogger
 torch.manual_seed(42)
 
 
-def attack_dataloader(name: str, sample_id, targets, split="val", transform=None):
+def attack_dataloader(
+    name: str, sample_id, targets, split="val", transform=None, shuffle=True
+):
     # Set multi-target labels
     datasets = [
         Subset(
@@ -28,7 +30,7 @@ def attack_dataloader(name: str, sample_id, targets, split="val", transform=None
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=5,
-        shuffle=True,
+        shuffle=shuffle,
         collate_fn=collate_fn,
     )
     return dataloader

@@ -13,10 +13,12 @@ from utils.constraint import Constraint
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/attack_mode_test/tauxih5q"
+run_path = "lichangyue/qwen-test/fw4bm3uq"
 run = api.run(run_path)
 config = json.loads(run.json_config)
-file = run.file("perturbation.pth").download(root="./save", replace=True, exist_ok=True)
+file = run.file("perturbation.pth").download(
+    root="./save", replace=False, exist_ok=True
+)
 results = torch.load(file.name)
 
 # Offline
@@ -40,10 +42,8 @@ model = get_model(cfg.model_name)
 def evaluate(cfg: Config):
 
     dataloader = attack_dataloader(
-        cfg.dataset_name, cfg.sample_id, cfg.targets, split=cfg.split
+        cfg.dataset_name, cfg.sample_id, cfg.targets, split=cfg.split, shuffle=False
     )
-    dataset = dataloader.dataset
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=30, shuffle=False)
     attacker = get_attacker(cfg, model)
     attacker.pert = results["perturbation"]
 
@@ -52,28 +52,18 @@ def evaluate(cfg: Config):
     loss = 0.0
     model.model.eval()
     loss_fn = torch.nn.CrossEntropyLoss()
-    with torch.no_grad():
-        for i, item in enumerate(dataloader):
-            inputs, target = attacker.get_inputs(**item, generation=True)
-            image, target = inputs["pixel_values"].cuda(), target.cuda()
-            label = torch.tensor([int(label) for label in item["label"]], device="cuda")
-            logits = model.model(image)
-            pred = logits.argmax(-1)
-            acc += (pred == label).sum().item()
-            asr += (pred == target).sum().item()
-            loss += loss_fn(logits, target).item()
+    asr = attacker.tester(dataloader)
 
-    print("Loss", loss := loss / len(dataloader))
-    asr /= len(dataset)
-    acc /= len(dataset)
+    # print("Loss", loss := loss / len(dataloader))
+    # acc /= len(dataloader)
     print("ASR: ", asr)
-    print("ACC: ", acc)
-    return asr, acc, loss
+    # print("ACC: ", acc)
+    return asr
 
 
-asr, acc, loss = evaluate(cfg)
-run.summary.update({"Train_ASR": asr, "Train_ACC": acc, "Train_Loss": loss})
+asr = evaluate(cfg)
+run.summary.update({"Train_ASR": asr})
 
 cfg.sample_id = (cfg.sample_id + 30)[:, :20]
-asr, acc, loss = evaluate(cfg)
-run.summary.update({"Test_ASR": asr, "Test_ACC": acc, "Test_Loss": loss})
+asr = evaluate(cfg)
+run.summary.update({"Test_ASR": asr})

@@ -121,6 +121,9 @@ class VisualLanguageModel(Model):
         loss = self.model(**inputs, labels=labels).loss
         return loss
 
+    def forward(self, inputs):
+        return self.model(**inputs).logits
+
     def generate_inputs(self, image, *, questions, targets, generation=False):
         eos_token = self.processor.tokenizer.eos_token
         colon_ids = self.processor.tokenizer.encode(
@@ -203,9 +206,8 @@ class TimmModel(Model):
         return self._resize_image(image)
 
     def calc_loss(self, inputs: dict, labels: torch.Tensor):
-        image, labels = inputs["pixel_values"].cuda(), labels.cuda()
-        outputs = self.model(image)
-        loss = torch.nn.CrossEntropyLoss()(outputs, labels)
+        outputs = self.forward(inputs)
+        loss = torch.nn.CrossEntropyLoss()(outputs, labels.cuda())
         return loss
 
     def generate_inputs(self, image, *, questions, targets, generation=False):
@@ -215,3 +217,6 @@ class TimmModel(Model):
     def image_preprocess(self, image):
         transform = transforms.Compose(self.transform.transforms[:-1])
         return transform(image)
+
+    def forward(self, inputs):
+        return self.model(inputs["pixel_values"].cuda())

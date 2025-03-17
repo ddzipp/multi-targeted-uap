@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 from config.config import Config
-from models.base import Model
+from models.base import Model, TimmModel
 from utils.constraint import Constraint
 
 # from utils.optimizer import MomentumOptimizer
@@ -56,12 +56,14 @@ class Attacker:
 
         # add perturbation to pixel_values
         if self.on_normalized:
+            if self.constraint._mask.shape[-1] != inputs["pixel_values"].shape[-1]:
+                self.constraint._mask = self.model.image_preprocess(mask).to(float)
+
             if self.pert.shape[-1] != inputs["pixel_values"].shape[-1]:
                 warnings.warn(
                     "The shape of perturbation is not equal to the shape of image, "
                     "Re-init the perturbation."
                 )
-                self.constraint._mask = self.model.image_preprocess(mask).to(float)
                 self.pert = torch.rand_like(self.constraint._mask, requires_grad=True)
                 self.velocity = torch.zeros_like(self.pert)
 
@@ -98,13 +100,19 @@ class Attacker:
     def tester(self, dataloader):
         asr = 0
         for item in dataloader:
-            inputs, target = self.get_inputs(**item, generation=True)
-            image, target = inputs["pixel_values"].cuda(), target.cuda()
+            inputs, targets = self.get_inputs(**item, generation=True)
+            logits = self.model.forward(inputs)
             # label = torch.tensor([int(label) for label in item["label"]], device="cuda")
-            logits = self.model.model(image)
-            pred = logits.argmax(-1)
-            asr += (pred == target).sum().item()
-        return asr / len(dataloader)
+            if isinstance(self.model, TimmModel):
+                pred = logits.argmax(-1)
+            else:
+                pred = logits.argmax(-1)[:, -1]
+                targets = self.model.processor.tokenizer(
+                    item["targets"], return_tensors="pt"
+                )["input_ids"][:, 0].to(pred.device)
+            asr += (pred == targets).sum().item()
+
+        return asr / len(dataloader.dataset)
 
     def saver(self, filename="./save/perturbation.pth"):
         dirpath = os.path.dirname(filename)
