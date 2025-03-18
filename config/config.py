@@ -1,5 +1,5 @@
 import argparse
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 import torch
 import yaml  # type: ignore
@@ -15,13 +15,13 @@ class Config:
 
     # dataset info
     # dataset_name: str = "VQA"
-    dataset_name: str = "ImageNet"
+    dataset_name: str = "MUAP"
     split: str = "val"
     # targets: torch.Tensor = torch.randperm(1000)[:2]
-    targets: tuple = ("WARNING!", "ERROR!")
-    sample_id: torch.Tensor = torch.stack(
-        [torch.arange(1000 * i, 1000 * i + 30) for i in range(len(targets))]
+    targets: dict = field(
+        default_factory=lambda: {"0": "WARNING!", "1": "ERROR!", "2": "ERROR!"}
     )
+    sample_id: torch.Tensor = torch.arange(28)
     batch_size: int = 5
     # model info
     model_name: str = "Qwen"  # renset50, llava

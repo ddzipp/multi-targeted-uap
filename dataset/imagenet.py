@@ -30,6 +30,7 @@ class ImageNetTestDataset(torchvision.datasets.ImageFolder):
         self.label2image = json.load(open(path + "/imagenet_test_label2index.json"))
         if sort:
             self.samples.sort(key=lambda x: self.image2label[x[0].split("/")[-1]])
+        self.targets = list(self.image2label.values())
 
     def __getitem__(self, idx) -> VisionData:
         image, _ = super().__getitem__(idx)

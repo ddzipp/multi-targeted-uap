@@ -17,22 +17,16 @@ torch.manual_seed(42)
 
 def attack_dataloader(
     name: str,
-    sample_id,
-    targets,
+    sample_id: torch.Tensor,
+    targets: dict,
     split="val",
     transform=None,
     shuffle=True,
     batch_size=5,
 ):
     # Set multi-target labels
-    datasets = [
-        Subset(
-            load_dataset(name, split=split, target=target, transform=transform),
-            sample_id[i],
-        )
-        for i, target in enumerate(targets)
-    ]
-    dataset = torch.utils.data.ConcatDataset(datasets)
+    dataset = load_dataset(name, split=split, targets=targets, transform=transform)
+    dataset = Subset(dataset, sample_id.flatten())
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
@@ -57,7 +51,7 @@ def main():
     run = WBLogger(
         project="qwen-test",
         config=cfg,
-        name="debug2_test",
+        name="MUAP-Dataset-2class",
     ).run
     # TODO: Accelerator is not supported in this version
     # accelerator = Accelerator()

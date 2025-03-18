@@ -4,14 +4,14 @@ from torchvision import transforms
 from dataset.base import AttackDataset
 from dataset.cropa import CropaDataset
 from dataset.imagenet import ImageNetDataset, ImageNetTestDataset
+from dataset.muap import MUAP
 from dataset.vqa import VQADataset
 
 
 def load_dataset(
-    name, *, transform=None, target=None, path=None, split="val"
+    name, *, transform=None, targets=None, path=None, split="val"
 ) -> AttackDataset:
     if path is None:
-
         path = f"./data/{name}"
     # Preprocess the image to 299x299
     if transform is None:
@@ -29,9 +29,11 @@ def load_dataset(
         dataset = ImageNetDataset(path=path, split=split, transform=transform)
     elif name.lower() == "cropa":
         dataset = CropaDataset(path=path, split=split, transform=transform)
+    elif name.lower() == "muap":
+        dataset = MUAP(path=path, transform=transform)
     else:
         raise ValueError(f"Unknown dataset name {name}")
-    dataset = AttackDataset(dataset, target)
+    dataset = AttackDataset(dataset, targets)
     return dataset
 
 
