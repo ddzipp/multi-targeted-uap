@@ -18,9 +18,7 @@ class Config:
     dataset_name: str = "MUAP"
     split: str = "val"
     # targets: torch.Tensor = torch.randperm(1000)[:2]
-    targets: dict = field(
-        default_factory=lambda: {"0": "WARNING!", "1": "ERROR!", "2": "ERROR!"}
-    )
+    targets: dict = field(default_factory=lambda: {"0": "WARNING!", "1": "ERROR!", "2": "INFO!"})
     sample_id: torch.Tensor = torch.arange(28)
     batch_size: int = 5
     # model info
@@ -42,7 +40,6 @@ class Config:
         return asdict(self)
 
     def __post_init__(self):
-
         # command line arguments
         parser = argparse.ArgumentParser(description="Config file path")
         parser.add_argument(

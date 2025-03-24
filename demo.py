@@ -1,7 +1,6 @@
 import os
 
 import torch
-from accelerate import Accelerator
 from torch.utils.data import Subset
 from tqdm import tqdm
 
@@ -11,7 +10,7 @@ from dataset import collate_fn, load_dataset
 from models import get_model
 from utils.logger import WBLogger
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6"
 torch.manual_seed(42)
 
 
@@ -51,7 +50,7 @@ def main():
     run = WBLogger(
         project="qwen-test",
         config=cfg,
-        name="MUAP-Dataset-2class",
+        name="MUAP-Dataset-3class",
     ).run
     # TODO: Accelerator is not supported in this version
     # accelerator = Accelerator()
@@ -65,7 +64,7 @@ def main():
                 # attacker.saver(f"./save/{str(i)}_0.pth")
                 run.log({"loss": loss})
                 pbar.set_postfix({"loss": f"{loss:.2f}"})
-                if loss < 0.5:
+                if loss < 0.3:
                     break
     finally:
         # save perturbation and mask

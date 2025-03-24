@@ -2,24 +2,21 @@ import json
 import re
 
 import torch
-import yaml  # type: ignore
 
 import wandb
 from attacks import get_attacker
 from config import Config
 from demo import attack_dataloader
 from models import get_model
-from utils.constraint import Constraint
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/qwen-test/fw4bm3uq"
+run_path = "lichangyue/qwen-test/b2v4c3pt"
 run = api.run(run_path)
 config = json.loads(run.json_config)
-file = run.file("perturbation.pth").download(
-    root="./save", replace=False, exist_ok=True
-)
-results = torch.load(file.name)
+
+f = run.file("perturbation.pth").download(root="./save", replace=True, exist_ok=True)
+results = torch.load(f.name)
 
 # Offline
 # local_path = "wandb/run-20250304_061521-8og0625r"
@@ -33,26 +30,25 @@ cfg = Config()
 cfg.__dict__.update(config)
 
 # Test on the training set or the test set
-cfg.sample_id = torch.tensor(
-    [list(map(int, re.findall(r"\d+", x))) for x in cfg.sample_id[1:-2].split(r"]")]
-)
+cfg.sample_id = torch.tensor([list(map(int, re.findall(r"\d+", x))) for x in cfg.sample_id[1:-2].split(r"]")])
 cfg.sample_id = torch.tensor(cfg.sample_id)
 model = get_model(cfg.model_name)
 
 
 def evaluate(cfg: Config):
-
     dataloader = attack_dataloader(
-        cfg.dataset_name, cfg.sample_id, cfg.targets, split=cfg.split, shuffle=False
+        cfg.dataset_name,
+        cfg.sample_id,
+        cfg.targets,
+        split=cfg.split,
+        shuffle=False,
+        batch_size=1,
     )
     attacker = get_attacker(cfg, model)
     attacker.pert = results["perturbation"]
 
     asr = 0.0
-    acc = 0.0
-    loss = 0.0
     model.model.eval()
-    loss_fn = torch.nn.CrossEntropyLoss()
     asr = attacker.tester(dataloader)
 
     # print("Loss", loss := loss / len(dataloader))
@@ -65,6 +61,6 @@ def evaluate(cfg: Config):
 asr = evaluate(cfg)
 run.summary.update({"Train_ASR": asr})
 
-cfg.sample_id = (cfg.sample_id + 30)[:, :20]
+cfg.sample_id = (cfg.sample_id + 28)[:12]
 asr = evaluate(cfg)
 run.summary.update({"Test_ASR": asr})

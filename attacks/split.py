@@ -1,5 +1,3 @@
-from functools import partial
-
 import torch
 
 from attacks.base import Attacker
@@ -7,7 +5,6 @@ from utils.constraint import Constraint
 
 
 class SplitConstraint(Constraint):
-
     def __init__(self, mode: str = "frame", *, num_targets: int = 2, **kwargs) -> None:
         super().__init__(mode, **kwargs)
         self.num_targets = num_targets
@@ -32,11 +29,11 @@ class SplitConstraint(Constraint):
         target_id = torch.tensor(target_id).to(_mask.device)
         split_width = _mask.shape[-1] // self.num_targets
         # calc the left and right bound
-        l = split_width * target_id
-        r = split_width * (target_id + 1)
+        lb = split_width * target_id
+        rb = split_width * (target_id + 1)
         batch_idx = torch.arange(_mask.shape[0])[:, None]
         width_idx = torch.arange(_mask.shape[-1])[None, :]
-        condition = (width_idx >= l[:, None]) & (width_idx < r[:, None])
+        condition = (width_idx >= lb[:, None]) & (width_idx < rb[:, None])
         _mask[batch_idx, ..., width_idx] *= condition[..., None, None].to(_mask.device)
         return _mask
 
@@ -49,12 +46,8 @@ class SplitConstraint(Constraint):
 class SplitAttacker(Attacker):
     constraint: SplitConstraint
 
-    def get_adv_inputs(
-        self, image, target: list, question, label=None, answer=None, generation=False
-    ) -> torch.Tensor:
+    def get_adv_inputs(self, image, target: list, question, label=None, answer=None, generation=False) -> torch.Tensor:
         # add split mask to pixel_values
         self.constraint.target = target
-        inputs = super().get_adv_inputs(
-            image, target, question, label, answer, generation
-        )
+        inputs = super().get_adv_inputs(image, target, question, label, answer, generation)
         return inputs

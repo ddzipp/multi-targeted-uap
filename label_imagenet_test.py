@@ -10,9 +10,7 @@ from tqdm import tqdm
 accelerator = Accelerator()
 
 # 加载预训练的EVA-02 Large模型
-model = timm.create_model(
-    "eva02_large_patch14_448.mim_m38m_ft_in22k_in1k", pretrained=True
-)
+model = timm.create_model("eva02_large_patch14_448.mim_m38m_ft_in22k_in1k", pretrained=True)
 
 data_cfg = timm.data.resolve_data_config(model.pretrained_cfg)
 transform = timm.data.create_transform(**data_cfg)
@@ -23,9 +21,7 @@ test_imagenet_path = "./data/ImageNet/test"
 batch_size = 128
 test_dataset = torchvision.datasets.ImageFolder(test_imagenet_path, transform=transform)
 # test_dataset = torch.utils.data.Subset(test_dataset, range(10))  # 只使用前1000张图像
-dataloader = torch.utils.data.DataLoader(
-    test_dataset, batch_size=batch_size, shuffle=False
-)
+dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # 使用accelerator准备模型和数据加载器
 model, dataloader = accelerator.prepare(model, dataloader)
@@ -44,11 +40,7 @@ with torch.no_grad():
         # 获取当前批次中的图像文件名
         for i in range(len(preds)):
             # 计算正确的全局索引，考虑进程索引
-            global_idx = (
-                idx * batch_size * accelerator.num_processes
-                + accelerator.process_index * batch_size
-                + i
-            )
+            global_idx = idx * batch_size * accelerator.num_processes + accelerator.process_index * batch_size + i
             if global_idx < len(test_dataset):
                 img_path = test_dataset.imgs[global_idx][0]
                 # img_path = test_dataset.dataset.imgs[global_idx][0]

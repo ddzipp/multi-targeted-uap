@@ -1,16 +1,12 @@
 import os
-import warnings
 
 import torch
-from torch import nn
 
-from config.config import Config
 from models.base import Model, TimmModel
 from utils.constraint import Constraint
 
 
 class Attacker:
-
     def __init__(
         self,
         model: Model,
@@ -114,9 +110,9 @@ class Attacker:
                 pred = logits.argmax(-1)
             else:
                 pred = logits.argmax(-1)[:, -1]
-                targets = self.model.processor.tokenizer(
-                    item["targets"], return_tensors="pt"
-                )["input_ids"][:, 0].to(pred.device)
+                targets = self.model.processor.tokenizer(item["targets"], return_tensors="pt")["input_ids"][:, 0].to(
+                    pred.device
+                )
             asr += (pred == targets).sum().item()
 
         return asr / len(dataloader.dataset)

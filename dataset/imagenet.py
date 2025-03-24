@@ -21,10 +21,7 @@ class ImageNetDataset(torchvision.datasets.ImageNet):
 
 
 class ImageNetTestDataset(torchvision.datasets.ImageFolder):
-
-    def __init__(
-        self, path: str = "./data/ImageNet", split="test", transform=None, sort=True
-    ):
+    def __init__(self, path: str = "./data/ImageNet", split="test", transform=None, sort=True):
         super().__init__(root=path + "/" + split, transform=transform)
         self.image2label = json.load(open(path + "/imagenet_test_labels.json"))
         self.label2image = json.load(open(path + "/imagenet_test_label2index.json"))

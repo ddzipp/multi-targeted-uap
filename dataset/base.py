@@ -20,11 +20,7 @@ class AttackDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = self.dataset[idx]
-        target = (
-            self.targets
-            if not isinstance(self.targets, dict)
-            else self.targets.get(item["label"], None)
-        )
+        target = self.targets if not isinstance(self.targets, dict) else self.targets.get(item["label"], None)
         return {
             "image": item["image"],
             "label": item["label"],

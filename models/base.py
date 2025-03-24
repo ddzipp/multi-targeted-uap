@@ -85,7 +85,6 @@ class Model(ABC):
 
 
 class VisualLanguageModel(Model):
-
     @abstractmethod
     def __init__(self, device="auto", torch_dtype="float16", **kwargs):
         pass
@@ -126,10 +125,6 @@ class VisualLanguageModel(Model):
 
     def generate_inputs(self, image, *, questions, targets, generation=False):
         eos_token = self.processor.tokenizer.eos_token
-        colon_ids = self.processor.tokenizer.encode(
-            "Assistant:", add_special_tokens=False
-        )[-1]
-
         prompts = []
         for q, a in zip(questions, targets):
             conv = [
@@ -147,9 +142,7 @@ class VisualLanguageModel(Model):
             ]
             if generation:
                 conv.pop(-1)
-            conversation = self.processor.apply_chat_template(
-                conv, add_generation_prompt=generation
-            )
+            conversation = self.processor.apply_chat_template(conv, add_generation_prompt=generation)
             prompts.append(conversation)
 
         inputs = self.processor(
@@ -160,7 +153,11 @@ class VisualLanguageModel(Model):
             do_rescale=False,  # the image is already rescaled to [0, 1]
         )
         label_ids = inputs["input_ids"].clone()
-        colons_poision = torch.where(label_ids == colon_ids)[-1][1::2] + 1
+
+        # colon_ids = self.processor.tokenizer.encode(
+        #     "Assistant:", add_special_tokens=False
+        # )[-1]
+        # colons_poision = torch.where(label_ids == colon_ids)[-1][1::2] + 1
         # label_ids[
         #     torch.arange(label_ids.shape[1])[None, :] <= colons_poision[:, None]
         # ] = -100
@@ -169,13 +166,12 @@ class VisualLanguageModel(Model):
         return inputs, label_ids
 
     def image_preprocess(self, image, do_normalize=True):
-        return self.processor.image_processor(
-            image, return_tensors="pt", do_rescale=False, do_normalize=do_normalize
-        )["pixel_values"]
+        return self.processor.image_processor(image, return_tensors="pt", do_rescale=False, do_normalize=do_normalize)[
+            "pixel_values"
+        ]
 
 
 class TimmModel(Model):
-
     def __init__(self, model_name: str):
         import timm  # pylint: disable=import-outside-toplevel
 
@@ -183,9 +179,7 @@ class TimmModel(Model):
         self.model = timm.create_model(model_name, pretrained=True).cuda().eval()
         data_cfg = timm.data.resolve_data_config(self.model.pretrained_cfg)
         transform = timm.data.create_transform(**data_cfg)
-        self.transform = transforms.Compose(
-            [t for t in transform.transforms if not isinstance(t, transforms.ToTensor)]
-        )
+        self.transform = transforms.Compose([t for t in transform.transforms if not isinstance(t, transforms.ToTensor)])
         assert isinstance(transform.transforms[-1], transforms.Normalize)
         self._mean, self._std = (
             transform.transforms[-1].mean,

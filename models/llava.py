@@ -10,7 +10,6 @@ from models.base import RegisterModel, VisualLanguageModel
 
 @RegisterModel()
 class LLava(VisualLanguageModel):
-
     model_id = "llava-hf/llava-1.5-7b-hf"
 
     def __init__(self, device="auto", torch_dtype="float16"):
@@ -56,7 +55,6 @@ class LLavaNext(VisualLanguageModel):
     model_id = "llava-hf/llava-v1.6-mistral-7b-hf"
 
     def __init__(self, device="auto", torch_dtype="float16"):
-
         self.device = device
         self._model = LlavaNextForConditionalGeneration.from_pretrained(
             self.model_id, device_map=device, torch_dtype=torch_dtype

@@ -80,7 +80,6 @@ class InstructBlip2(VisualLanguageModel):
     model_id = "Salesforce/instructblip-vicuna-7b"
 
     def __init__(self, device="auto", torch_dtype="float16"):
-
         self.device = device
         self._model = InstructBlipForConditionalGeneration.from_pretrained(
             self.model_id, device_map=device, torch_dtype=torch_dtype

@@ -8,9 +8,7 @@ from dataset.muap import MUAP
 from dataset.vqa import VQADataset
 
 
-def load_dataset(
-    name, *, transform=None, targets=None, path=None, split="val"
-) -> AttackDataset:
+def load_dataset(name, *, transform=None, targets=None, path=None, split="val") -> AttackDataset:
     if path is None:
         path = f"./data/{name}"
     # Preprocess the image to 299x299

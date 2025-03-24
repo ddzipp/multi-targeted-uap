@@ -1,7 +1,5 @@
 import torch
 
-from utils.distance import get_distance
-
 
 class Constraint:
     """

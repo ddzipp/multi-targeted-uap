@@ -15,9 +15,7 @@ def flatten(x: torch.Tensor, start_dim: int = 1) -> torch.Tensor:
 
 class Distance(ABC):
     @abstractmethod
-    def __call__(
-        self, reference: torch.Tensor, perturbed: torch.Tensor
-    ) -> torch.Tensor: ...
+    def __call__(self, reference: torch.Tensor, perturbed: torch.Tensor) -> torch.Tensor: ...
 
     @abstractmethod
     def clip_perturbation(
@@ -56,9 +54,7 @@ class LpDistance(Distance):
     def __str__(self) -> str:
         return f"L{self.p} distance"
 
-    def __call__(
-        self, references: torch.Tensor, perturbed: torch.Tensor
-    ) -> torch.Tensor:
+    def __call__(self, references: torch.Tensor, perturbed: torch.Tensor) -> torch.Tensor:
         """Calculates the distances from references to perturbed.
 
         Args:
@@ -111,9 +107,7 @@ class LpDistance(Distance):
         norms = torch.norm(flatten(p), self.p, dim=-1)
         norms = torch.maximum(norms, torch.tensor(1e-12))  # avoid divsion by zero
         factor = epsilon / norms
-        factor = torch.minimum(
-            torch.tensor(1), factor
-        )  # clipping -> decreasing but not increasing
+        factor = torch.minimum(torch.tensor(1), factor)  # clipping -> decreasing but not increasing
         if self.p == 0:
             if (factor == 1).all():
                 return perturbed

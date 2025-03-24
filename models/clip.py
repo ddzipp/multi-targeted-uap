@@ -5,7 +5,6 @@ from models.base import RegisterModel, VisualLanguageModel
 
 @RegisterModel()
 class Clip(VisualLanguageModel):
-
     model_id = "openai/clip-vit-base-patch32"
 
     def __init__(self, device="auto", torch_dtype="float16"):
@@ -22,12 +21,8 @@ class Clip(VisualLanguageModel):
         """
 
         self.device = device
-        self._model = CLIPModel.from_pretrained(
-            self.model_id, device_map=device, torch_dtype=torch_dtype
-        )
-        self._processor = CLIPProcessor.from_pretrained(
-            self.model_id, device_map=device, torch_dtype=torch_dtype
-        )
+        self._model = CLIPModel.from_pretrained(self.model_id, device_map=device, torch_dtype=torch_dtype)
+        self._processor = CLIPProcessor.from_pretrained(self.model_id, device_map=device, torch_dtype=torch_dtype)
 
     def prompt_wrap(self, question: str, answer: str | None = None) -> str:
         return f"Question:{question} Answer:{answer if answer is not None else ''}"

@@ -12,15 +12,9 @@ class VQADataset(Dataset):
         super().__init__()
         self.path = path
         self.split = split
-        self.question_path = os.path.join(
-            self.path, f"v2_OpenEnded_mscoco_{split}2014_questions.json"
-        )
-        self.annotation_path = os.path.join(
-            self.path, f"v2_mscoco_{split}2014_annotations.json"
-        )
-        self.complicated_path = os.path.join(
-            self.path, f"v2_mscoco_{split}2014_complicated.json"
-        )
+        self.question_path = os.path.join(self.path, f"v2_OpenEnded_mscoco_{split}2014_questions.json")
+        self.annotation_path = os.path.join(self.path, f"v2_mscoco_{split}2014_annotations.json")
+        self.complicated_path = os.path.join(self.path, f"v2_mscoco_{split}2014_complicated.json")
         self.image_path = os.path.join(self.path, f"{split}2014")
         self.questions, self.answers = self.read_question_answer()
         self.length = len(self.questions)
@@ -34,9 +28,7 @@ class VQADataset(Dataset):
         return questions, answers
 
     def get_img_path(self, question):
-        return os.path.join(
-            self.image_path, f"COCO_{self.split}2014_{question['image_id']:012d}.jpg"
-        )
+        return os.path.join(self.image_path, f"COCO_{self.split}2014_{question['image_id']:012d}.jpg")
 
     def __getitem__(self, idx) -> VisionData:
         question = self.questions[idx]
