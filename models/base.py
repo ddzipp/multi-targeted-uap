@@ -161,7 +161,7 @@ class VisualLanguageModel(Model):
         # label_ids[
         #     torch.arange(label_ids.shape[1])[None, :] <= colons_poision[:, None]
         # ] = -100
-        label_ids[:, :-10] = -100
+        label_ids[:, :-10] = -100  # TODO: fix the mask of label_ids
 
         return inputs, label_ids
 

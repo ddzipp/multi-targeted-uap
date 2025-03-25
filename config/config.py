@@ -19,7 +19,7 @@ class Config:
     split: str = "val"
     # targets: torch.Tensor = torch.randperm(1000)[:2]
     targets: dict = field(default_factory=lambda: {"0": "WARNING!", "1": "ERROR!", "2": "INFO!"})
-    sample_id: torch.Tensor = torch.arange(28)
+    sample_id: torch.Tensor = torch.arange(24).reshape(3, 8)[:, :5].to(int)
     batch_size: int = 5
     # model info
     model_name: str = "Qwen"  # renset50, llava
@@ -50,7 +50,6 @@ class Config:
             help="Path to the config file",
         )
         args, unknown_args = parser.parse_known_args()
-
         self.read_config_file(args.config_file)
         # update config with all command line arguments
         for key, value in vars(args).items():

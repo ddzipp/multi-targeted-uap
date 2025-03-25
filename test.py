@@ -6,7 +6,7 @@ import torch
 import wandb
 from attacks import get_attacker
 from config import Config
-from demo import attack_dataloader
+from demo import get_dataloader
 from models import get_model
 
 # Online
@@ -36,7 +36,7 @@ model = get_model(cfg.model_name)
 
 
 def evaluate(cfg: Config):
-    dataloader = attack_dataloader(
+    dataloader = get_dataloader(
         cfg.dataset_name,
         cfg.sample_id,
         cfg.targets,

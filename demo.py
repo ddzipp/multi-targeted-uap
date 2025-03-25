@@ -1,7 +1,7 @@
 import os
 
 import torch
-from torch.utils.data import Subset
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 
 from attacks import get_attacker
@@ -14,7 +14,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6"
 torch.manual_seed(42)
 
 
-def attack_dataloader(
+def get_dataloader(
     name: str,
     sample_id: torch.Tensor,
     targets: dict,
@@ -25,8 +25,8 @@ def attack_dataloader(
 ):
     # Set multi-target labels
     dataset = load_dataset(name, split=split, targets=targets, transform=transform)
-    dataset = Subset(dataset, sample_id.flatten())
-    dataloader = torch.utils.data.DataLoader(
+    dataset = Subset(dataset, sample_id.flatten().tolist())
+    dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
@@ -38,19 +38,19 @@ def attack_dataloader(
 def main():
     # init
     cfg = Config()
-    model = get_model(cfg.model_name)
-    dataloader = attack_dataloader(
+    dataloader = get_dataloader(
         cfg.dataset_name,
         cfg.sample_id,
         cfg.targets,
         split=cfg.split,
         batch_size=cfg.batch_size,
     )
+    model = get_model(cfg.model_name)
     attacker = get_attacker(cfg, model)
     run = WBLogger(
         project="qwen-test",
         config=cfg,
-        name="MUAP-Dataset-3class",
+        name="Incident_3classes",
     ).run
     # TODO: Accelerator is not supported in this version
     # accelerator = Accelerator()
