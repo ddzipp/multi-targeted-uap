@@ -1,19 +1,16 @@
 import torch
 from PIL.Image import Image
-from transformers import (
-    AutoProcessor,
-    Qwen2_5_VLForConditionalGeneration,
-    Qwen2VLForConditionalGeneration,
-)
 
 from models.base import RegisterModel, VisualLanguageModel
 
 
 @RegisterModel()
-class Qwen(VisualLanguageModel):
+class Qwen2(VisualLanguageModel):
     model_id = "Qwen/Qwen2-VL-2B-Instruct"
 
     def __init__(self, device="auto", torch_dtype="float16"):
+        from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
+
         self._model = Qwen2VLForConditionalGeneration.from_pretrained(
             self.model_id, device_map=device, torch_dtype=torch_dtype
         )
@@ -41,13 +38,14 @@ class Qwen(VisualLanguageModel):
         return self._model
 
 
-class Qwen2__5(Qwen):
+class Qwen25(Qwen2):
     model_id = "Qwen/Qwen2.5-VL-3B-Instruct"
 
     def __init__(self, device="auto", torch_dtype="float16"):
+        from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
+
         self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            self.model_id,
-            device_map="auto",
+            self.model_id, device_map=device, torch_dtype=torch_dtype
         )
         self._processor = AutoProcessor.from_pretrained(self.model_id)
         self.tokenizer = self.processor.tokenizer

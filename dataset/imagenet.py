@@ -8,6 +8,20 @@ from dataset.base import VisionData
 class ImageNetDataset(torchvision.datasets.ImageNet):
     def __init__(self, path: str = "./data/ImageNet", split="val", transform=None):
         super().__init__(root=path, split=split, transform=transform)
+        # from collections import Counter
+        # import json
+        # c = Counter(self.targets)
+
+        # start_idx = torch.zeros(1000).to(int)
+        # for i in range(1, 1000):
+        #     start_idx[i] = c[i - 1] + start_idx[i - 1]
+
+        # for i in range(1, 1000):
+        #     a = self.targets[start_idx[i] - 1]
+        #     b = self.targets[start_idx[i]]
+        #     assert a != b
+
+        # json.dump(start_idx, open("./data/ImageNet/imagenet_train_start_idx.json", "w"))
 
     def __getitem__(self, idx) -> VisionData:
         image, label = super().__getitem__(idx)

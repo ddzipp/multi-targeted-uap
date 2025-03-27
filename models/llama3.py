@@ -1,5 +1,3 @@
-from transformers import AutoProcessor, MllamaForConditionalGeneration
-
 from models.base import RegisterModel, VisualLanguageModel
 
 
@@ -8,6 +6,8 @@ class Llama3(VisualLanguageModel):
     model_id = "meta-llama/Llama-3.2-11B-Vision-Instruct"
 
     def __init__(self, device="auto", torch_dtype="float16"):
+        from transformers import AutoProcessor, MllamaForConditionalGeneration
+
         self._model = MllamaForConditionalGeneration.from_pretrained(
             self.model_id, device_map=device, torch_dtype=torch_dtype
         )

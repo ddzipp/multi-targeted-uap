@@ -27,8 +27,6 @@ class Attacker:
         self.ref_shape = (1, 3, ref_size, ref_size)
         self.pert = self.__init_pert__()
         self.velocity = torch.zeros_like(self.pert)
-        self.tokenizer = self.model.processor.tokenizer
-        self.eos_token_id: int = self.tokenizer.eos_token_id
 
     def __init_pert__(self):
         self.pert = torch.rand(self.ref_shape)

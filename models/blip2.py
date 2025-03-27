@@ -1,10 +1,3 @@
-from transformers import (
-    Blip2ForConditionalGeneration,
-    Blip2Processor,
-    InstructBlipForConditionalGeneration,
-    InstructBlipProcessor,
-)
-
 from models.base import RegisterModel, VisualLanguageModel
 
 
@@ -31,18 +24,13 @@ class Blip2(VisualLanguageModel):
             pixel_values=pixel_values, attention_mask=input_ids["attention_mask"])
         processor.batch_decode(output.logits[:, -1, :].argmax(-1), skip_special_tokens=True)
         """
+        from transformers import Blip2ForConditionalGeneration, Blip2Processor
 
         self.device = device
         self._model = Blip2ForConditionalGeneration.from_pretrained(
-            self.model_id,
-            device_map=device,
-            torch_dtype=torch_dtype,
-            revision="51572668da0eb669e01a189dc22abe6088589a24",
+            self.model_id, device_map=device, torch_dtype=torch_dtype
         )
-        self._processor = Blip2Processor.from_pretrained(
-            self.model_id,
-            revision="51572668da0eb669e01a189dc22abe6088589a24",
-        )
+        self._processor = Blip2Processor.from_pretrained(self.model_id)
 
     @property
     def processor(self):
@@ -80,6 +68,8 @@ class InstructBlip2(VisualLanguageModel):
     model_id = "Salesforce/instructblip-vicuna-7b"
 
     def __init__(self, device="auto", torch_dtype="float16"):
+        from transformers import InstructBlipForConditionalGeneration, InstructBlipProcessor
+
         self.device = device
         self._model = InstructBlipForConditionalGeneration.from_pretrained(
             self.model_id, device_map=device, torch_dtype=torch_dtype

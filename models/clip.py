@@ -1,5 +1,3 @@
-from transformers import CLIPModel, CLIPProcessor
-
 from models.base import RegisterModel, VisualLanguageModel
 
 
@@ -19,6 +17,7 @@ class Clip(VisualLanguageModel):
                 normalize_vision_input = True
             )[0]
         """
+        from transformers import CLIPModel, CLIPProcessor
 
         self.device = device
         self._model = CLIPModel.from_pretrained(self.model_id, device_map=device, torch_dtype=torch_dtype)

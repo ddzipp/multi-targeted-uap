@@ -1,4 +1,6 @@
+import json
 import os
+import random
 
 import torch
 from torch.utils.data import DataLoader, Subset
@@ -10,7 +12,7 @@ from dataset import collate_fn, load_dataset
 from models import get_model
 from utils.logger import WBLogger
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 torch.manual_seed(42)
 
 
@@ -25,19 +27,27 @@ def get_dataloader(
 ):
     # Set multi-target labels
     dataset = load_dataset(name, split=split, targets=targets, transform=transform)
-    dataset = Subset(dataset, sample_id.flatten().tolist())
-    dataloader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        collate_fn=collate_fn,
-    )
+    dataset = Subset(dataset, sample_id)
+    dataloader = DataLoader(dataset, batch_size, shuffle, collate_fn=collate_fn)
     return dataloader
+
+
+def set_target_sample(cfg: Config):
+    if cfg.dataset_name == "ImageNet":
+        rand_targets = random.sample(range(0, 1000), cfg.num_targets * 2)
+        cfg.targets = {str(i): j for i, j in zip(rand_targets[::2], rand_targets[1::2])}
+        with open("./data/ImageNet/imagenet_train_start_idx.json", "r") as f:
+            start_idx = json.load(f)
+        sample_id = []
+        for key, value in cfg.targets.items():
+            sample_id += list(range(start_idx[key], start_idx[key] + cfg.train_size))
+        cfg.sample_id = sample_id
 
 
 def main():
     # init
     cfg = Config()
+    set_target_sample(cfg)
     dataloader = get_dataloader(
         cfg.dataset_name,
         cfg.sample_id,
@@ -47,8 +57,8 @@ def main():
     )
     model = get_model(cfg.model_name)
     attacker = get_attacker(cfg, model)
-    run = WBLogger(project="llama3-test", config=cfg, name="Incident_3classes").run
-    # TODO: Accelerator is not supported in this version
+    run = WBLogger(project="ImageNet-DNN-Eval", config=cfg, name="densenet121").run
+    # TODO: Accelerator is not supported in current version
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
     # attacker.pert = accelerator.prepare(attacker.pert)
@@ -57,7 +67,7 @@ def main():
         with tqdm(range(cfg.epoch)) as pbar:
             for i in pbar:
                 loss = attacker.trainer(dataloader)
-                # attacker.saver(f"./save/{str(i)}_0.pth")
+                attacker.saver(f"./save/{str(i)}_0.pth")
                 run.log({"loss": loss})
                 pbar.set_postfix({"loss": f"{loss:.2f}"})
                 if loss < 0.3:
