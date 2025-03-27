@@ -9,6 +9,7 @@ from tqdm import tqdm
 # 初始化accelerator
 accelerator = Accelerator()
 
+
 # 加载预训练的EVA-02 Large模型
 model = timm.create_model("eva02_large_patch14_448.mim_m38m_ft_in22k_in1k", pretrained=True)
 

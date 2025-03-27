@@ -20,9 +20,9 @@ class Config:
     # targets: torch.Tensor = torch.randperm(1000)[:2]
     targets: dict = field(default_factory=lambda: {"0": "WARNING!", "1": "ERROR!", "2": "INFO!"})
     sample_id: torch.Tensor = torch.arange(24).reshape(3, 8)[:, :5].to(int)
-    batch_size: int = 5
+    batch_size: int = 1
     # model info
-    model_name: str = "Qwen"  # renset50, llava
+    model_name: str = "instructionblip"  # renset50, llava
 
     # attack info
     attack_name: str = "base"  # base, split, union_split

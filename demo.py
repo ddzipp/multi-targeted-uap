@@ -47,11 +47,7 @@ def main():
     )
     model = get_model(cfg.model_name)
     attacker = get_attacker(cfg, model)
-    run = WBLogger(
-        project="qwen-test",
-        config=cfg,
-        name="Incident_3classes",
-    ).run
+    run = WBLogger(project="llama3-test", config=cfg, name="Incident_3classes").run
     # TODO: Accelerator is not supported in this version
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)

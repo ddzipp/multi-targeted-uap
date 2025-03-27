@@ -1,4 +1,5 @@
 import json
+import os
 import re
 
 import torch
@@ -9,9 +10,11 @@ from config import Config
 from demo import get_dataloader
 from models import get_model
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6"
+
 # Online
 api = wandb.Api()
-run_path = "lichangyue/qwen-test/b2v4c3pt"
+run_path = "lichangyue/qwen-test/v76nlofj"
 run = api.run(run_path)
 config = json.loads(run.json_config)
 
@@ -30,8 +33,11 @@ cfg = Config()
 cfg.__dict__.update(config)
 
 # Test on the training set or the test set
-cfg.sample_id = torch.tensor([list(map(int, re.findall(r"\d+", x))) for x in cfg.sample_id[1:-2].split(r"]")])
-cfg.sample_id = torch.tensor(cfg.sample_id)
+if isinstance(cfg.sample_id, str):
+    cfg.sample_id = torch.tensor([list(map(int, re.findall(r"\d+", x))) for x in cfg.sample_id[1:-2].split(r"]")])
+else:
+    cfg.sample_id = torch.tensor(cfg.sample_id)
+
 model = get_model(cfg.model_name)
 
 
@@ -49,18 +55,18 @@ def evaluate(cfg: Config):
 
     asr = 0.0
     model.model.eval()
-    asr = attacker.tester(dataloader)
+    asr, contain_rate = attacker.tester(dataloader)
 
     # print("Loss", loss := loss / len(dataloader))
     # acc /= len(dataloader)
     print("ASR: ", asr)
-    # print("ACC: ", acc)
-    return asr
+    print("ContainRate: ", contain_rate)
+    return asr, contain_rate
 
 
-asr = evaluate(cfg)
-run.summary.update({"Train_ASR": asr})
+# asr, _ = evaluate(cfg)
+# run.summary.update({"Train_ASR": asr})
 
-cfg.sample_id = (cfg.sample_id + 28)[:12]
-asr = evaluate(cfg)
-run.summary.update({"Test_ASR": asr})
+cfg.sample_id = (cfg.sample_id + 5)[..., :3]
+asr, _ = evaluate(cfg)
+# run.summary.update({"Test_ASR": asr})

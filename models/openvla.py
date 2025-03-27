@@ -1,8 +1,9 @@
 import torch
 
-from models.base import VisualLanguageModel
+from models.base import RegisterModel, VisualLanguageModel
 
 
+@RegisterModel()
 class OpenVLA(VisualLanguageModel):
     """
     OpenVLA model for visual language tasks.
