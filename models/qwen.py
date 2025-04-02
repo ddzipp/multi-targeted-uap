@@ -38,7 +38,8 @@ class Qwen2(VisualLanguageModel):
         return self._model
 
 
-class Qwen25(Qwen2):
+@RegisterModel()
+class Qwen2_5(Qwen2):
     model_id = "Qwen/Qwen2.5-VL-3B-Instruct"
 
     def __init__(self, device="auto", torch_dtype="float16"):

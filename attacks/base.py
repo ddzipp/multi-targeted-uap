@@ -60,7 +60,7 @@ class Attacker:
     def get_adv_inputs(
         self,
         images: torch.Tensor,
-        targets: list,
+        targets: torch.tensor,
         questions: list,
         labels=None,
         answers=None,
@@ -69,12 +69,8 @@ class Attacker:
         # add perturbation to pixel_values
         if not self.on_normalized:
             images = self.constraint(images, self.pert)
-        inputs, label_ids = self.model.generate_inputs(
-            images,
-            targets=targets,
-            questions=questions,
-            generation=generation,
-        )
+        inputs, label_ids = self.model.generate_inputs(images, questions, targets=targets, generation=generation)
+
         # add perturbation to normalized pixel_values
         if self.on_normalized:
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)

@@ -69,7 +69,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def generate_inputs(self, image, *, questions, targets, generation=False):
+    def generate_inputs(self, image, questions, *, targets, generation=False):
         pass
 
     @abstractmethod
@@ -123,46 +123,23 @@ class VisualLanguageModel(Model):
     def forward(self, inputs):
         return self.model(**inputs).logits
 
-    def generate_inputs(self, image, *, questions, targets, generation=False):
-        eos_token = self.processor.tokenizer.eos_token
+    def generate_inputs(self, image, questions, *, targets, generation=False):
         prompts = []
-        for q, a in zip(questions, targets):
+        for q in questions:
             conv = [
                 {
                     "role": "user",
-                    "content": [
-                        {"type": "text", "text": q},
-                        {"type": "image"},
-                    ],
-                },
-                {
-                    "role": "assistant",
-                    "content": [{"type": "text", "text": a + eos_token}],
+                    "content": [{"type": "text", "text": q}, {"type": "image"}],
                 },
             ]
-            if generation:
-                conv.pop(-1)
             conversation = self.processor.apply_chat_template(conv, add_generation_prompt=generation)
             prompts.append(conversation)
-
-        inputs = self.processor(
-            images=image,
-            text=prompts,
-            return_tensors="pt",
-            padding=True,
-            do_rescale=False,  # the image is already rescaled to [0, 1]
-        )
+        # the image has already rescaled to [0, 1]
+        inputs = self.processor(images=image, text=prompts, return_tensors="pt", padding=True, do_rescale=False)
+        inputs["input_ids"] = torch.cat([inputs["input_ids"], targets], dim=-1)
+        inputs["attention_mask"] = torch.ones_like(inputs["input_ids"], dtype=torch.int64)
         label_ids = inputs["input_ids"].clone()
-
-        # colon_ids = self.processor.tokenizer.encode(
-        #     "Assistant:", add_special_tokens=False
-        # )[-1]
-        # colons_poision = torch.where(label_ids == colon_ids)[-1][1::2] + 1
-        # label_ids[
-        #     torch.arange(label_ids.shape[1])[None, :] <= colons_poision[:, None]
-        # ] = -100
-        label_ids[:, :-10] = -100  # TODO: fix the mask of label_ids
-
+        label_ids[:, : -targets.shape[-1]] = -100
         return inputs, label_ids
 
     def image_preprocess(self, image, do_normalize=True):
@@ -181,12 +158,10 @@ class TimmModel(Model):
         transform = timm.data.create_transform(**data_cfg)
         self.transform = transforms.Compose([t for t in transform.transforms if not isinstance(t, transforms.ToTensor)])
         assert isinstance(transform.transforms[-1], transforms.Normalize)
-        self._mean, self._std = (
-            transform.transforms[-1].mean,
-            transform.transforms[-1].std,
-        )
+        self._mean, self._std = transform.transforms[-1].mean, transform.transforms[-1].std
         assert isinstance(transform.transforms[0], transforms.Resize)
         self._resize_image = transform.transforms[0]
+        self.processor = None
 
     @property
     def mean(self) -> torch.Tensor:
@@ -204,9 +179,9 @@ class TimmModel(Model):
         loss = torch.nn.CrossEntropyLoss()(outputs, labels.cuda())
         return loss
 
-    def generate_inputs(self, image, *, questions, targets, generation=False):
+    def generate_inputs(self, image, questions, *, targets, generation=False):
         processed_image = self.transform(image)
-        return {"pixel_values": processed_image}, torch.tensor(targets)
+        return {"pixel_values": processed_image}, targets
 
     def image_preprocess(self, image, do_normalize=True):
         transform = self.transform

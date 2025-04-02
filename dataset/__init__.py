@@ -31,7 +31,6 @@ def load_dataset(name, *, transform=None, targets=None, path=None, split="val") 
         dataset = MUAP(path=path, transform=transform)
     else:
         raise ValueError(f"Unknown dataset name {name}")
-    dataset = AttackDataset(dataset, targets)
     return dataset
 
 
@@ -41,6 +40,7 @@ def collate_fn(batch):
     questions = [item["question"] for item in batch]
     answers = [item["answer"] for item in batch]
     targets = [item["target"] for item in batch]
+    targets: torch.Tensor = torch.tensor(targets)
 
     return {
         "images": images,
