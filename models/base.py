@@ -69,7 +69,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def generate_inputs(self, image, questions, *, targets, generation=False):
+    def generate_inputs(self, image, questions, *, targets, generation=True):
         pass
 
     @abstractmethod
@@ -123,7 +123,7 @@ class VisualLanguageModel(Model):
     def forward(self, inputs):
         return self.model(**inputs).logits
 
-    def generate_inputs(self, image, questions, *, targets, generation=False):
+    def generate_inputs(self, image, questions, *, targets, generation=True):
         prompts = []
         for q in questions:
             conv = [
@@ -179,7 +179,7 @@ class TimmModel(Model):
         loss = torch.nn.CrossEntropyLoss()(outputs, labels.cuda())
         return loss
 
-    def generate_inputs(self, image, questions, *, targets, generation=False):
+    def generate_inputs(self, image, questions, *, targets, generation=True):
         processed_image = self.transform(image)
         return {"pixel_values": processed_image}, targets
 

@@ -31,6 +31,7 @@ class Blip2(VisualLanguageModel):
             self.model_id, device_map=device, torch_dtype=torch_dtype
         )
         self._processor = Blip2Processor.from_pretrained(self.model_id)
+        self._processor.chat_template = "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}{% for message in messages %}{% for content in message['content'] %}{% if 'text' in content %}{{content['text']}}{% endif %}{% endfor %}{% endfor %}{% if add_generation_prompt %}{{ ' Answer:' }}{% endif %}"
 
     @property
     def processor(self):
@@ -75,10 +76,7 @@ class InstructBlip2(VisualLanguageModel):
             self.model_id, device_map=device, torch_dtype=torch_dtype
         )
         self._processor = InstructBlipProcessor.from_pretrained(self.model_id)
-        self.tokenizer = self.processor.tokenizer
-        self.lm_embeds = self.model.get_input_embeddings()
-        self.image_processor = self.processor.image_processor
-        self.qformer = self.processor.qformer
+        self._processor.chat_template = "{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}{% for message in messages %}{% for content in message['content'] %}{% if 'text' in content %}{{content['text']}}{% endif %}{% endfor %}{% endfor %}{% if add_generation_prompt %}{{ ' Answer:' }}{% endif %}"
 
     @property
     def processor(self):

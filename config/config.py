@@ -16,13 +16,13 @@ class Config:
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
     split: str = "train"
-    batch_size: int = 5
-    num_targets: int = 3
+    batch_size: int = 2
+    num_targets: int = 2
     train_size: int = 50
     targets: dict | None = None
     sample_id: list | None = None
     # model info
-    model_name: str = "Qwen2"  # renset50, llava
+    model_name: str = "Llava"  # renset50, llava
 
     # attack info
     attack_name: str = "base"  # base, split, union_split

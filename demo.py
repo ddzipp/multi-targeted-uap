@@ -67,7 +67,7 @@ def main():
         processor=model.processor,
     )
     attacker = get_attacker(cfg, model)
-    run = WBLogger(project="ImageNet-DNN-Eval", config=cfg, name="densenet_3target").run
+    run = WBLogger(project="ImageNet-VLM-Eval", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
     # TODO: Accelerator is not supported in current version
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
@@ -77,14 +77,14 @@ def main():
         with tqdm(range(cfg.epoch)) as pbar:
             for i in pbar:
                 loss = attacker.trainer(dataloader)
-                attacker.saver(f"./save/3target/densenet/{str(i)}_0.pth")
+                attacker.saver(f"./save/{cfg.model_name}/{str(i)}_0.pth")
                 run.log({"loss": loss})
                 pbar.set_postfix({"loss": f"{loss:.2f}"})
                 # if loss < 0.1:
                 #     break
     finally:
         # save perturbation and mask
-        attacker.saver(filename := "./save/3target/densenet/perturbation.pth")
+        attacker.saver(filename := f"./save/{cfg.model_name}/perturbation.pth")
         run.save(filename, base_path="save")
         run.finish()
 

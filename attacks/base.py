@@ -64,12 +64,11 @@ class Attacker:
         questions: list,
         labels=None,
         answers=None,
-        generation=False,
     ):
         # add perturbation to pixel_values
         if not self.on_normalized:
             images = self.constraint(images, self.pert)
-        inputs, label_ids = self.model.generate_inputs(images, questions, targets=targets, generation=generation)
+        inputs, label_ids = self.model.generate_inputs(images, questions, targets=targets)
 
         # add perturbation to normalized pixel_values
         if self.on_normalized:
