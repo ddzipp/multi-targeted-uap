@@ -60,8 +60,8 @@ class Attacker:
     def get_adv_inputs(
         self,
         images: torch.Tensor,
-        targets: torch.tensor,
         questions: list,
+        targets: torch.Tensor | None,
         labels=None,
         answers=None,
     ):
@@ -96,21 +96,23 @@ class Attacker:
 
     @torch.no_grad()
     def tester(self, dataloader):
-        asr = 0
+        processor, model = self.model.processor, self.model.model
+        preds, targets = [], []
         for item in dataloader:
-            inputs, targets = self.get_adv_inputs(**item, generation=True)
-            logits = self.model.forward(inputs)
             # label = torch.tensor([int(label) for label in item["label"]], device="cuda")
             if isinstance(self.model, TimmModel):
+                logits = self.model.forward(item)
                 pred = logits.argmax(-1)
             else:
-                pred = logits.argmax(-1)[:, -1]
-                targets = self.model.processor.tokenizer(item["targets"], return_tensors="pt")["input_ids"][:, 0].to(
-                    pred.device
-                )
-            asr += (pred == targets).sum().item()
+                target = processor.batch_decode(item["targets"], skip_special_tokens=True)
+                inputs, _ = self.get_adv_inputs(item["images"], item["questions"], None)
+                output = model.generate(**inputs, max_new_tokens=10)
+                pred = processor.batch_decode(output[:, inputs["input_ids"].shape[-1] :], skip_special_tokens=True)
+            # asr += (pred == targets).sum().item()
+            preds += pred
+            targets += target
 
-        return asr / len(dataloader.dataset)
+        return preds, targets
 
     def saver(self, filename="./save/perturbation.pth"):
         dirpath = os.path.dirname(filename)

@@ -14,11 +14,11 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6"
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/qwen-test/v76nlofj"
+run_path = "lichangyue/ImageNet-VLM-Eval/rkynyh46"
 run = api.run(run_path)
 config = json.loads(run.json_config)
 
-f = run.file("perturbation.pth").download(root="./save", replace=True, exist_ok=True)
+f = run.file("Llava/perturbation.pth").download(root="./save", replace=False, exist_ok=True)
 results = torch.load(f.name)
 
 # Offline
@@ -39,34 +39,36 @@ else:
     cfg.sample_id = torch.tensor(cfg.sample_id)
 
 model = get_model(cfg.model_name)
+model.model.eval()
 
 
 def evaluate(cfg: Config):
     dataloader = get_dataloader(
-        cfg.dataset_name,
-        cfg.sample_id,
-        cfg.targets,
-        split=cfg.split,
-        shuffle=False,
-        batch_size=1,
+        cfg.dataset_name, cfg.sample_id, cfg.targets, split=cfg.split, shuffle=False, batch_size=1
     )
     attacker = get_attacker(cfg, model)
     attacker.pert = results["perturbation"]
 
     asr = 0.0
-    model.model.eval()
-    asr, contain_rate = attacker.tester(dataloader)
+
+    preds, targets = attacker.tester(dataloader)
 
     # print("Loss", loss := loss / len(dataloader))
     # acc /= len(dataloader)
     print("ASR: ", asr)
-    print("ContainRate: ", contain_rate)
-    return asr, contain_rate
+    return asr
 
 
-# asr, _ = evaluate(cfg)
+def asr(preds, targets):
+    asr = 0
+    for p, t in zip(preds, targets):
+        if p.startswith(t):
+            asr += 1
+
+
+# asr = evaluate(cfg)
 # run.summary.update({"Train_ASR": asr})
-
-cfg.sample_id = (cfg.sample_id + 5)[..., :3]
-asr, _ = evaluate(cfg)
+cfg.sample_id = cfg.sample_id.view(cfg.num_targets, -1)
+cfg.sample_id = (cfg.sample_id + cfg.train_size)[..., :3].reshape(-1)
+asr = evaluate(cfg)
 # run.summary.update({"Test_ASR": asr})

@@ -123,7 +123,7 @@ class VisualLanguageModel(Model):
     def forward(self, inputs):
         return self.model(**inputs).logits
 
-    def generate_inputs(self, image, questions, *, targets, generation=True):
+    def generate_inputs(self, image, questions, *, targets=None, generation=True):
         prompts = []
         for q in questions:
             conv = [
@@ -136,6 +136,8 @@ class VisualLanguageModel(Model):
             prompts.append(conversation)
         # the image has already rescaled to [0, 1]
         inputs = self.processor(images=image, text=prompts, return_tensors="pt", padding=True, do_rescale=False)
+        if targets is None:
+            return inputs, None
         inputs["input_ids"] = torch.cat([inputs["input_ids"], targets], dim=-1)
         inputs["attention_mask"] = torch.ones_like(inputs["input_ids"], dtype=torch.int64)
         label_ids = inputs["input_ids"].clone()
