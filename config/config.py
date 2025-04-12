@@ -17,7 +17,7 @@ class Config:
     dataset_name: str = "ImageNet"
     split: str = "train"
     batch_size: int = 2
-    num_targets: int = 2
+    num_targets: int = 3
     train_size: int = 50
     targets: dict | None = None
     sample_id: list | None = None

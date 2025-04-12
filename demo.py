@@ -18,7 +18,7 @@ torch.manual_seed(42)
 
 def get_dataloader(
     name: str,
-    sample_id: torch.Tensor,
+    sample_id: list,
     targets: dict,
     split="val",
     shuffle=True,
