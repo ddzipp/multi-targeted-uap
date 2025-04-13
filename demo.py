@@ -72,20 +72,23 @@ def main():
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
     # attacker.pert = accelerator.prepare(attacker.pert)
+    save_dir = f"./save/{cfg.model_name}_T{cfg.num_targets}"
     try:
         # train loop
         with tqdm(range(cfg.epoch)) as pbar:
             for i in pbar:
                 loss = attacker.trainer(dataloader)
-                attacker.saver(f"./save/{cfg.model_name}/{str(i)}_0.pth")
                 run.log({"loss": loss})
                 pbar.set_postfix({"loss": f"{loss:.2f}"})
+                if i % 50 == 0:
+                    attacker.saver(filename := f"{save_dir}/{str(i)}.pth")
+                    run.save(filename)
                 # if loss < 0.1:
                 #     break
     finally:
         # save perturbation and mask
-        attacker.saver(filename := f"./save/{cfg.model_name}/perturbation.pth")
-        run.save(filename, base_path="save")
+        attacker.saver(filename := f"{save_dir}/perturbation.pth")
+        run.save(filename)
         run.finish()
 
 

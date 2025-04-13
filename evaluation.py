@@ -1,6 +1,7 @@
 import os
 import re
 
+import numpy as np
 import torch
 
 import wandb
@@ -19,8 +20,10 @@ config = run.config
 cfg = Config()
 cfg.__dict__.update(config)
 
-f = run.file(f"{config['model_name']}/perturbation.pth").download(root="./save", replace=False, exist_ok=True)
-results = torch.load(f.name)
+file_name = f"./save/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth"
+if not os.path.exists(file_name):
+    f = run.file(file_name).download()
+results = torch.load(file_name)
 
 # Test on the training set or the test set
 if isinstance(cfg.sample_id, str):
@@ -57,7 +60,27 @@ torch.save(
         "test_preds": test_preds,
         "test_targets": test_targets,
     },
-    f.name.replace(".pth", "_evaluation.pth"),
+    file_name.replace(".pth", "_evaluation.pth"),
 )
 
+
+def calc_asr(preds, targets):
+    preds = np.array(preds)
+    targets = np.array(targets)
+    asr_targets = []
+    datasize = len(preds) // cfg.num_targets
+    for i in range(cfg.num_targets):
+        left = i * datasize
+        right = (i + 1) * datasize
+        preds_i = preds[left:right]
+        targets_i = targets[left:right]
+        asr_targets.append((preds_i == targets_i).mean().item())
+    print("ASR for each target:", asr_targets)
+    print(f"Average ASR: {np.mean(asr_targets):.4f}")
+    return asr_targets
+
+
+train_asr = calc_asr(results["train_preds"], results["train_targets"])
+test_asr = calc_asr(results["test_preds"], results["test_targets"])
+run.summary.update({"Train_ASR": train_asr, "Test_ASR": test_asr})
 # run.summary.update({"Test_ASR": asr})
