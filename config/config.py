@@ -17,7 +17,7 @@ class Config:
     dataset_name: str = "ImageNet"
     split: str = "train"
     batch_size: int = 2
-    num_targets: int = 3
+    num_targets: int = 5
     train_size: int = 50
     targets: dict | None = None
     sample_id: list | None = None
@@ -27,7 +27,7 @@ class Config:
     # attack info
     attack_name: str = "base"  # base, split, union_split
     lr: float = 0.01 * batch_size
-    epoch: int = 500
+    epoch: int = 200
     attack_mode: str = "frame"
     bound: tuple = (0, 1)
     # bound: tuple = (-16 / 255, 16 / 255)

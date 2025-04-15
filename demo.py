@@ -80,8 +80,8 @@ def main():
                 loss = attacker.trainer(dataloader)
                 run.log({"loss": loss})
                 pbar.set_postfix({"loss": f"{loss:.2f}"})
-                if i % 50 == 0:
-                    attacker.saver(filename := f"{save_dir}/{str(i)}.pth")
+                attacker.saver(filename := f"{save_dir}/{str(i)}.pth")
+                if i % 10 == 0:
                     run.save(filename)
                 # if loss < 0.1:
                 #     break

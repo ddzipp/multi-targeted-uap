@@ -120,6 +120,7 @@ class Attacker:
         torch.save(
             {
                 "perturbation": self.pert.detach(),
+                "velocity": self.velocity.detach(),
                 # "mask": self.constraint.mask,
             },
             filename,
