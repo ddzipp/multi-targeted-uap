@@ -57,22 +57,12 @@ class Attacker:
             upper = upper.repeat((batch,) + (1,) * (image.ndim - 1))
             return torch.clip(image, lower, upper)
 
-    def get_adv_inputs(
-        self,
-        images: torch.Tensor,
-        questions: list,
-        targets: torch.Tensor | None,
-        labels=None,
-        answers=None,
-    ):
-        # add perturbation to pixel_values
-        if not self.on_normalized:
-            images = self.constraint(images, self.pert)
-        inputs, label_ids = self.model.generate_inputs(images, questions, targets=targets)
-
+    def get_adv_inputs(self, inputs: dict, label_ids: torch.Tensor):
         # add perturbation to normalized pixel_values
         if self.on_normalized:
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)
+        else:
+            raise NotImplementedError("Only on_normalized is supported")
         inputs["pixel_values"] = self.clip_image(inputs["pixel_values"])
         return inputs, label_ids
 
@@ -86,7 +76,7 @@ class Attacker:
         for item in dataloader:
             # self.optimizer.zero_grad()
             self.pert = self.pert.detach().requires_grad_()
-            inputs, targets = self.get_adv_inputs(**item)
+            inputs, targets = self.get_adv_inputs(item["inputs"], item["label_ids"])
             loss = self.model.calc_loss(inputs, targets)
             loss.backward()
             # self.optimizer.step()

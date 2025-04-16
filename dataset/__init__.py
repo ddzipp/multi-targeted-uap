@@ -13,12 +13,7 @@ def load_dataset(name, *, transform=None, targets=None, path=None, split="val") 
         path = f"./data/{name}"
     # Preprocess the image to 299x299
     if transform is None:
-        transform = transforms.Compose(
-            [
-                transforms.Resize((299, 299)),
-                transforms.ToTensor(),
-            ]
-        )
+        transform = transforms.Compose([transforms.Resize((299, 299)), transforms.ToTensor()])
     if name.lower() == "vqa":
         dataset = VQADataset(path=path, split=split, transform=transform)
     elif name.lower() == "imagenet" and split == "test":
@@ -35,17 +30,10 @@ def load_dataset(name, *, transform=None, targets=None, path=None, split="val") 
 
 
 def collate_fn(batch):
-    images = torch.stack([item["image"] for item in batch])
-    labels = [item["label"] for item in batch]
-    questions = [item["question"] for item in batch]
-    answers = [item["answer"] for item in batch]
-    targets = [item["target"] for item in batch]
-    targets: torch.Tensor = torch.tensor(targets)
+    lable_ids = torch.cat([item["label_ids"] for item in batch])
+    inputs_list = [item["inputs"] for item in batch]
+    inputs = {}
+    for k in inputs_list[0].keys():
+        inputs[k] = torch.cat([item[k] for item in inputs_list])
 
-    return {
-        "images": images,
-        "labels": labels,
-        "questions": questions,
-        "answers": answers,
-        "targets": targets,
-    }
+    return {"inputs": inputs, "label_ids": lable_ids}
