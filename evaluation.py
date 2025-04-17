@@ -10,27 +10,33 @@ from config import Config
 from demo import get_dataloader
 from models import get_model
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5,6"
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/ImageNet-VLM-Eval/79kwmrmf"
+run_path = "lichangyue/ImageNet-VLM-Eval/fiv6w54q"
 run = api.run(run_path)
 config = run.config
 cfg = Config()
 cfg.__dict__.update(config)
 
-file_name = f"./save/{cfg.model_name}_T{cfg.num_targets}/400.pth"
+file_name = f"./save/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth"
 result_path = file_name.replace(".pth", "_evaluation.pth")
 
 
 @torch.no_grad()
 def evaluate(cfg: Config, perturbation):
     dataloader = get_dataloader(
-        cfg.dataset_name, cfg.sample_id, cfg.targets, split=cfg.split, shuffle=False, batch_size=1
+        cfg.dataset_name,
+        cfg.sample_id,
+        cfg.targets,
+        split=cfg.split,
+        batch_size=1,
+        processor=model.processor,
+        eval=True,
     )
     attacker = get_attacker(cfg, model)
-    attacker.pert = results["perturbation"]
+    attacker.pert = perturbation
 
     preds, targets = attacker.tester(dataloader)
     return preds, targets
@@ -67,12 +73,15 @@ else:
         cfg.sample_id = torch.tensor([list(map(int, re.findall(r"\d+", x))) for x in cfg.sample_id[1:-2].split(r"]")])
         cfg.sample_id = cfg.sample_id.flatten().tolist()
 
-    model = get_model(cfg.model_name)
+    model = get_model(cfg.model_name, torch_dtype=torch.float32)
+    print("Evaluation on the training set")
     train_preds, train_targets = evaluate(cfg, perturbation)
     cfg.sample_id = torch.tensor(cfg.sample_id)
     cfg.sample_id = cfg.sample_id.view(cfg.num_targets, -1)
     cfg.sample_id = (cfg.sample_id + cfg.train_size)[..., :20].flatten().tolist()
+    print("Evaluation on the test set")
     test_preds, test_targets = evaluate(cfg, perturbation)
+    print("Done")
 
     torch.save(
         {
@@ -86,5 +95,6 @@ else:
 
 train_asr = calc_asr(train_preds, train_targets)
 test_asr = calc_asr(test_preds, test_targets)
-# run.summary.update({"Train_ASR": train_asr, "Test_ASR": test_asr})
+if "perturbation.pth" in file_name:
+    run.summary.update({"Train_ASR": train_asr, "Test_ASR": test_asr})
 # run.summary.update({"Test_ASR": asr})

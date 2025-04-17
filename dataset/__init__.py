@@ -30,10 +30,13 @@ def load_dataset(name, *, transform=None, targets=None, path=None, split="val") 
 
 
 def collate_fn(batch):
-    lable_ids = torch.cat([item["label_ids"] for item in batch])
+    label_ids = torch.cat([item["label_ids"] for item in batch])
     inputs_list = [item["inputs"] for item in batch]
     inputs = {}
     for k in inputs_list[0].keys():
         inputs[k] = torch.cat([item[k] for item in inputs_list])
 
-    return {"inputs": inputs, "label_ids": lable_ids}
+    targets = torch.tensor([item["target"] for item in batch])
+    images = torch.cat([item["image"] for item in batch])
+
+    return {"inputs": inputs, "label_ids": label_ids, "targets": targets, "images": images}

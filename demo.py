@@ -12,7 +12,7 @@ from dataset import AttackDataset, collate_fn, load_dataset
 from models import get_model, model_hub
 from utils.logger import WBLogger
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2"
 torch.manual_seed(42)
 
 
@@ -25,12 +25,12 @@ def get_dataloader(
     batch_size=5,
     transform=None,
     processor=None,
+    eval=False,
 ):
     # Set multi-target labels
     dataset = load_dataset(name, split=split, targets=targets, transform=transform)
     dataset = Subset(dataset, sample_id)
-    tokenizer = processor.tokenizer if processor else None
-    dataset = AttackDataset(dataset, targets, tokenizer)
+    dataset = AttackDataset(dataset, targets, processor, eval=eval)
     dataloader = DataLoader(dataset, batch_size, shuffle, collate_fn=collate_fn)
     return dataloader
 

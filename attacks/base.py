@@ -1,6 +1,7 @@
 import os
 
 import torch
+from tqdm import tqdm
 
 from models.base import Model, TimmModel
 from utils.constraint import Constraint
@@ -57,14 +58,14 @@ class Attacker:
             upper = upper.repeat((batch,) + (1,) * (image.ndim - 1))
             return torch.clip(image, lower, upper)
 
-    def get_adv_inputs(self, inputs: dict, label_ids: torch.Tensor):
+    def get_adv_inputs(self, inputs: dict):
         # add perturbation to normalized pixel_values
         if self.on_normalized:
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)
         else:
             raise NotImplementedError("Only on_normalized is supported")
         inputs["pixel_values"] = self.clip_image(inputs["pixel_values"])
-        return inputs, label_ids
+        return inputs
 
     def step(self, grad):
         self.velocity = self.momentum * self.velocity + grad / torch.norm(grad, p=1)
@@ -76,11 +77,11 @@ class Attacker:
         for item in dataloader:
             # self.optimizer.zero_grad()
             self.pert = self.pert.detach().requires_grad_()
-            inputs, targets = self.get_adv_inputs(item["inputs"], item["label_ids"])
-            loss = self.model.calc_loss(inputs, targets)
-            loss.backward()
-            # self.optimizer.step()
-            self.step(self.pert.grad)
+            inputs = self.get_adv_inputs(item["inputs"])
+            loss = self.model.calc_loss(inputs, item["label_ids"])
+            # autograd can save memory by recording pert grad only
+            grad = torch.autograd.grad(loss, self.pert)[0]
+            self.step(grad)
             total_loss += loss.item()
         return total_loss / len(dataloader)
 
@@ -88,19 +89,19 @@ class Attacker:
     def tester(self, dataloader):
         processor, model = self.model.processor, self.model.model
         preds, targets = [], []
-        for item in dataloader:
+        for item in tqdm(dataloader, desc="Testing"):
             # label = torch.tensor([int(label) for label in item["label"]], device="cuda")
             if isinstance(self.model, TimmModel):
                 logits = self.model.forward(item)
                 pred = logits.argmax(-1)
             else:
-                target = processor.batch_decode(item["targets"], skip_special_tokens=True)
-                inputs, _ = self.get_adv_inputs(item["images"], item["questions"], None)
+                target_tokens = processor.batch_decode(item["targets"], skip_special_tokens=True)
+                inputs = self.get_adv_inputs(item["inputs"])
                 output = model.generate(**inputs, max_new_tokens=10)
                 pred = processor.batch_decode(output[:, inputs["input_ids"].shape[-1] :], skip_special_tokens=True)
             # asr += (pred == targets).sum().item()
             preds += pred
-            targets += target
+            targets += target_tokens
 
         return preds, targets
 
