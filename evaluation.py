@@ -10,17 +10,17 @@ from config import Config
 from demo import get_dataloader
 from models import get_model
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "5,6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/ImageNet-VLM-Eval/fiv6w54q"
+run_path = "lichangyue/ImageNet-VLM-Eval/1wz271aj"
 run = api.run(run_path)
 config = run.config
 cfg = Config()
 cfg.__dict__.update(config)
 
-file_name = f"./save/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth"
+file_name = f"./save/{cfg.model_name}_T{cfg.num_targets}/199.pth"
 result_path = file_name.replace(".pth", "_evaluation.pth")
 
 
@@ -32,6 +32,7 @@ def evaluate(cfg: Config, perturbation):
         cfg.targets,
         split=cfg.split,
         batch_size=1,
+        shuffle=False,
         processor=model.processor,
         eval=True,
     )
@@ -73,7 +74,7 @@ else:
         cfg.sample_id = torch.tensor([list(map(int, re.findall(r"\d+", x))) for x in cfg.sample_id[1:-2].split(r"]")])
         cfg.sample_id = cfg.sample_id.flatten().tolist()
 
-    model = get_model(cfg.model_name, torch_dtype=torch.float32)
+    model = get_model(cfg.model_name)
     print("Evaluation on the training set")
     train_preds, train_targets = evaluate(cfg, perturbation)
     cfg.sample_id = torch.tensor(cfg.sample_id)

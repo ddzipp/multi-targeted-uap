@@ -12,7 +12,7 @@ from dataset import AttackDataset, collate_fn, load_dataset
 from models import get_model, model_hub
 from utils.logger import WBLogger
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
 torch.manual_seed(42)
 
 

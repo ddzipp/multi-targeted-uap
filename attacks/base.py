@@ -97,6 +97,7 @@ class Attacker:
             else:
                 target_tokens = processor.batch_decode(item["targets"], skip_special_tokens=True)
                 inputs = self.get_adv_inputs(item["inputs"])
+                inputs = {k: v.to("cuda") for k, v in inputs.items()}
                 output = model.generate(**inputs, max_new_tokens=10)
                 pred = processor.batch_decode(output[:, inputs["input_ids"].shape[-1] :], skip_special_tokens=True)
             # asr += (pred == targets).sum().item()

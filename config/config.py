@@ -16,18 +16,18 @@ class Config:
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
     split: str = "train"
-    batch_size: int = 2
-    num_targets: int = 5
+    batch_size: int = 4
+    num_targets: int = 2
     train_size: int = 50
     targets: dict | None = None
     sample_id: list | None = None
     # model info
-    model_name: str = "Llava"  # renset50, Llava, Qwen2_5
+    model_name: str = "Qwen2_5"  # renset50, Llava, Qwen2_5
 
     # attack info
     attack_name: str = "base"  # base, split, union_split
     lr: float = 0.01 * batch_size
-    epoch: int = 200
+    epoch: int = 500
     attack_mode: str = "frame"
     bound: tuple = (0, 1)
     # bound: tuple = (-16 / 255, 16 / 255)
