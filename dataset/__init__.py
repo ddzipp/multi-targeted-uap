@@ -38,5 +38,6 @@ def collate_fn(batch):
 
     targets = torch.tensor([item["target"] for item in batch])
     images = torch.cat([item["image"] for item in batch])
+    labels = [item["label"] for item in batch]
 
-    return {"inputs": inputs, "label_ids": label_ids, "targets": targets, "images": images}
+    return {"inputs": inputs, "labels": labels, "label_ids": label_ids, "targets": targets, "images": images}

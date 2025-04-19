@@ -3,6 +3,7 @@ import os
 import torch
 from tqdm import tqdm
 
+from dataset.base import AttackDataset
 from models.base import Model, TimmModel
 from utils.constraint import Constraint
 
@@ -74,11 +75,31 @@ class Attacker:
 
     def trainer(self, dataloader) -> float:
         total_loss = 0
+        dataset: AttackDataset = dataloader.dataset
+        target_dict = dataset.target_dict
+
+        def calc_loss(logits, labels, targets):
+            # cross entropy loss for positive targets
+            loss_fn = torch.nn.CrossEntropyLoss()
+            ce_loss = loss_fn(logits.view(-1, logits.shape[-1]), targets.view(-1))
+            # sum confidence of negative targets
+            neg_loss = 0
+            for key, val in target_dict.items():
+                neg_mask = [i != key for i in labels]
+                prob = logits[neg_mask].softmax(dim=-1).view(-1, logits.shape[-1])
+                neg_prob = prob[torch.arange(prob.shape[0]), val * sum(neg_mask)].sum()
+                neg_loss += neg_prob
+            neg_loss = neg_loss / len(target_dict)
+            # total loss
+            total_loss = ce_loss + neg_loss
+            return total_loss
+
         for item in dataloader:
             # self.optimizer.zero_grad()
             self.pert = self.pert.detach().requires_grad_()
             inputs = self.get_adv_inputs(item["inputs"])
-            loss = self.model.calc_loss(inputs, item["label_ids"])
+            logits = self.model.calc_logits(inputs, item["targets"])
+            loss = calc_loss(logits, item["labels"], item["targets"])
             # autograd can save memory by recording pert grad only
             grad = torch.autograd.grad(loss, self.pert)[0]
             self.step(grad)

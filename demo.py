@@ -12,7 +12,7 @@ from dataset import AttackDataset, collate_fn, load_dataset
 from models import get_model, model_hub
 from utils.logger import WBLogger
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
 torch.manual_seed(42)
 
 
@@ -67,12 +67,12 @@ def main():
         processor=model.processor,
     )
     attacker = get_attacker(cfg, model)
-    run = WBLogger(project="ImageNet-VLM-Eval", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
+    run = WBLogger(project="ImageNet-VLM-Regularization", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
     # TODO: Accelerator is not supported in current version
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
     # attacker.pert = accelerator.prepare(attacker.pert)
-    save_dir = f"./save/{cfg.model_name}_T{cfg.num_targets}"
+    save_dir = f"./save/regularization/{cfg.model_name}_T{cfg.num_targets}"
     try:
         # train loop
         with tqdm(range(cfg.epoch)) as pbar:

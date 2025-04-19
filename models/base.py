@@ -65,7 +65,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def calc_loss(self, inputs: dict, labels: torch.Tensor):
+    def calc_logits(self, inputs: dict, targets: torch.Tensor):
         pass
 
     @abstractmethod
@@ -116,9 +116,27 @@ class VisualLanguageModel(Model):
         crop_size = self.processor.image_processor.crop_size
         return transforms.Resize((crop_size["height"], crop_size["width"]))(image)
 
-    def calc_loss(self, inputs: dict, labels: torch.Tensor):
-        loss = self.model(**inputs, labels=labels).loss
+    def _calc_loss(self, logits: dict, attention_mask: torch.Tensor, labels: torch.Tensor):
+        # Shift so that tokens < n predict n
+        if attention_mask is not None:
+            # we use the input attention mask to shift the logits and labels, because it is 2D.
+            # we also crop attn mask in case it is longer, which happens in PrefixTuning with peft
+            shift_attention_mask = attention_mask[:, -(logits.shape[1] - 1) :].to(logits.device)
+            shift_logits = logits[..., :-1, :][shift_attention_mask.to(logits.device) != 0].contiguous()
+            shift_labels = labels[..., 1:][shift_attention_mask.to(labels.device) != 0].contiguous()
+        else:
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+        # Flatten the tokens
+        loss_fct = torch.nn.CrossEntropyLoss()
+        loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1).to(shift_logits.device))
         return loss
+
+    def calc_logits(self, inputs: dict, targets: torch.Tensor):
+        output = self.model(**inputs)
+        len_target = targets.shape[-1]
+        logits = output.logits[..., -len_target - 1 : -1, :].contiguous()
+        return logits
 
     def forward(self, inputs):
         return self.model(**inputs).logits
@@ -176,7 +194,7 @@ class TimmModel(Model):
     def resize_image(self, image):
         return self._resize_image(image)
 
-    def calc_loss(self, inputs: dict, labels: torch.Tensor):
+    def calc_logits(self, inputs: dict, targets: torch.Tensor):
         outputs = self.forward(inputs)
         loss = torch.nn.CrossEntropyLoss()(outputs, labels.cuda())
         return loss
