@@ -89,7 +89,7 @@ def main():
         with tqdm(range(1, 1 + cfg.epoch)) as pbar:
             for i in pbar:
                 loss = attacker.trainer(dataloader)
-                run.log(**loss)
+                run.log(loss)
                 pbar.set_postfix({"loss": f"{loss['loss']:.2f}"})
                 attacker.saver(filename := f"{save_dir}/{str(i)}.pth")
                 if i % 10 == 0:

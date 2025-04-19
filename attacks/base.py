@@ -87,6 +87,9 @@ class Attacker:
             neg_loss = 0
             for key, val in target_dict.items():
                 neg_mask = [i != key for i in labels]
+                # if all labels are positive, skip this target
+                if not any(neg_mask):
+                    continue
                 prob = logits[neg_mask].softmax(dim=-1).view(-1, logits.shape[-1])
                 neg_prob = prob[torch.arange(prob.shape[0]), val * sum(neg_mask)].mean()
                 neg_loss += neg_prob
@@ -128,7 +131,7 @@ class Attacker:
                 target_tokens = processor.batch_decode(item["targets"], skip_special_tokens=True)
                 inputs = self.get_adv_inputs(item["inputs"])
                 inputs = {k: v.to("cuda") for k, v in inputs.items()}
-                output = model.generate(**inputs, max_new_tokens=30)
+                output = model.generate(**inputs, max_new_tokens=5)
                 pred = processor.batch_decode(output[:, inputs["input_ids"].shape[-1] :], skip_special_tokens=True)
             # asr += (pred == targets).sum().item()
             preds += pred

@@ -14,13 +14,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/ImageNet-VLM-Regularization/a0m3545y"
+run_path = "lichangyue/ImageNet-VLM-Eval/41r0jc5s"
 run = api.run(run_path)
 config = run.config
 cfg = Config()
 cfg.__dict__.update(config)
 
-file_name = f"./save/regularization/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth"
+file_name = f"./save/{cfg.model_name}_T{cfg.num_targets}/499.pth"
 result_path = file_name.replace(".pth", "_evaluation.pth")
 
 

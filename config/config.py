@@ -27,7 +27,7 @@ class Config:
     # attack info
     attack_name: str = "base"  # base, split, union_split
     lr: float = 0.01 * batch_size
-    epoch: int = 500
+    epoch: int = 100
     attack_mode: str = "frame"
     bound: tuple = (0, 1)
     # bound: tuple = (-16 / 255, 16 / 255)
