@@ -6,6 +6,7 @@ from tqdm import tqdm
 from dataset.base import AttackDataset
 from models.base import Model, TimmModel
 from utils.constraint import Constraint
+from utils.logger import WBLogger
 
 
 class Attacker:
@@ -29,6 +30,7 @@ class Attacker:
         self.ref_shape = (1, 3, ref_size, ref_size)
         self.pert = self.__init_pert__()
         self.velocity = torch.zeros_like(self.pert)
+        self.run = WBLogger().run
 
     def __init_pert__(self):
         self.pert = torch.rand(self.ref_shape)
@@ -75,6 +77,7 @@ class Attacker:
 
     def trainer(self, dataloader) -> float:
         total_loss = 0
+        total_ce_loss, total_neg_loss = 0, 0
         dataset: AttackDataset = dataloader.dataset
         target_dict = dataset.target_dict
 
@@ -91,8 +94,12 @@ class Attacker:
                 neg_loss += neg_prob
             neg_loss = neg_loss / len(target_dict)
             # total loss
-            total_loss = ce_loss + neg_loss
-            return total_loss
+            loss = ce_loss + neg_loss
+            # record ce_loss and neg_loss for logging
+            nonlocal total_ce_loss, total_neg_loss
+            total_ce_loss += ce_loss.item()
+            total_neg_loss += neg_loss.item()
+            return loss
 
         for item in dataloader:
             # self.optimizer.zero_grad()
@@ -104,6 +111,7 @@ class Attacker:
             grad = torch.autograd.grad(loss, self.pert)[0]
             self.step(grad)
             total_loss += loss.item()
+        self.run.log({"ce_loss": total_ce_loss / len(dataloader), "neg_loss": total_neg_loss / len(dataloader)})
         return total_loss / len(dataloader)
 
     @torch.no_grad()

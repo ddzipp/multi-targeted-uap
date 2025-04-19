@@ -16,7 +16,7 @@ class Config:
     # dataset_name: str = "VQA"
     dataset_name: str = "ImageNet"
     split: str = "train"
-    batch_size: int = 5
+    batch_size: int = 4
     num_targets: int = 2
     train_size: int = 50
     targets: dict | None = None

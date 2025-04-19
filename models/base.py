@@ -196,7 +196,7 @@ class TimmModel(Model):
 
     def calc_logits(self, inputs: dict, targets: torch.Tensor):
         outputs = self.forward(inputs)
-        loss = torch.nn.CrossEntropyLoss()(outputs, labels.cuda())
+        loss = torch.nn.CrossEntropyLoss()(outputs, targets.cuda())
         return loss
 
     def generate_inputs(self, image, questions, *, targets, generation=True):

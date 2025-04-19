@@ -57,6 +57,7 @@ def main():
     # init
     cfg = Config()
     set_target_sample(cfg)
+    run = WBLogger(project="ImageNet-VLM-Regularization", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
     model = get_model(cfg.model_name)
     dataloader = get_dataloader(
         cfg.dataset_name,
@@ -67,7 +68,6 @@ def main():
         processor=model.processor,
     )
     attacker = get_attacker(cfg, model)
-    run = WBLogger(project="ImageNet-VLM-Regularization", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
     # TODO: Accelerator is not supported in current version
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
