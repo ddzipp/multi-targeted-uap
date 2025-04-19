@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 
+import wandb
 from attacks import get_attacker
 from config import Config
 from dataset import AttackDataset, collate_fn, load_dataset
@@ -19,7 +20,7 @@ torch.manual_seed(42)
 def get_dataloader(
     name: str,
     sample_id: list,
-    targets: dict,
+    targets: dict[str],
     split="val",
     shuffle=True,
     batch_size=5,
@@ -35,7 +36,14 @@ def get_dataloader(
     return dataloader
 
 
-def set_target_sample(cfg: Config):
+def set_target_sample(cfg: Config, resume_id=None):
+    if resume_id is not None:
+        api = wandb.Api()
+        run = api.run(resume_id)
+        config = run.config
+        cfg.__dict__.update(config)
+        return cfg
+
     if cfg.dataset_name == "ImageNet":
         rand_targets = random.sample(range(0, 1000), cfg.num_targets * 2)
         cfg.targets = {str(i): j for i, j in zip(rand_targets[::2], rand_targets[1::2])}
@@ -51,13 +59,15 @@ def set_target_sample(cfg: Config):
                 idx2class = json.load(f)
             for key, value in cfg.targets.items():
                 cfg.targets[key] = idx2class[str(value)].split(",")[0].strip()
+        return cfg
 
 
 def main():
     # init
     cfg = Config()
-    set_target_sample(cfg)
+    set_target_sample(cfg, resume_id="lichangyue/ImageNet-VLM-Eval/41r0jc5s")
     run = WBLogger(project="ImageNet-VLM-Regularization", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
+
     model = get_model(cfg.model_name)
     dataloader = get_dataloader(
         cfg.dataset_name,
@@ -67,19 +77,20 @@ def main():
         batch_size=cfg.batch_size,
         processor=model.processor,
     )
+    save_dir = f"./save/regularization/{cfg.model_name}_T{cfg.num_targets}"
     attacker = get_attacker(cfg, model)
+    attacker.pert = torch.load(f"./save/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth")["perturbation"]
     # TODO: Accelerator is not supported in current version
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
     # attacker.pert = accelerator.prepare(attacker.pert)
-    save_dir = f"./save/regularization/{cfg.model_name}_T{cfg.num_targets}"
     try:
         # train loop
-        with tqdm(range(cfg.epoch)) as pbar:
+        with tqdm(range(1, 1 + cfg.epoch)) as pbar:
             for i in pbar:
                 loss = attacker.trainer(dataloader)
-                run.log({"loss": loss})
-                pbar.set_postfix({"loss": f"{loss:.2f}"})
+                run.log(**loss)
+                pbar.set_postfix({"loss": f"{loss['loss']:.2f}"})
                 attacker.saver(filename := f"{save_dir}/{str(i)}.pth")
                 if i % 10 == 0:
                     run.save(filename)

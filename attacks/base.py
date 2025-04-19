@@ -6,7 +6,6 @@ from tqdm import tqdm
 from dataset.base import AttackDataset
 from models.base import Model, TimmModel
 from utils.constraint import Constraint
-from utils.logger import WBLogger
 
 
 class Attacker:
@@ -30,7 +29,6 @@ class Attacker:
         self.ref_shape = (1, 3, ref_size, ref_size)
         self.pert = self.__init_pert__()
         self.velocity = torch.zeros_like(self.pert)
-        self.run = WBLogger().run
 
     def __init_pert__(self):
         self.pert = torch.rand(self.ref_shape)
@@ -90,7 +88,7 @@ class Attacker:
             for key, val in target_dict.items():
                 neg_mask = [i != key for i in labels]
                 prob = logits[neg_mask].softmax(dim=-1).view(-1, logits.shape[-1])
-                neg_prob = prob[torch.arange(prob.shape[0]), val * sum(neg_mask)].sum()
+                neg_prob = prob[torch.arange(prob.shape[0]), val * sum(neg_mask)].mean()
                 neg_loss += neg_prob
             neg_loss = neg_loss / len(target_dict)
             # total loss
@@ -111,8 +109,11 @@ class Attacker:
             grad = torch.autograd.grad(loss, self.pert)[0]
             self.step(grad)
             total_loss += loss.item()
-        self.run.log({"ce_loss": total_ce_loss / len(dataloader), "neg_loss": total_neg_loss / len(dataloader)})
-        return total_loss / len(dataloader)
+        return {
+            "loss": total_loss / len(dataloader),
+            "ce_loss": total_ce_loss / len(dataloader),
+            "neg_loss": total_neg_loss / len(dataloader),
+        }
 
     @torch.no_grad()
     def tester(self, dataloader):
@@ -127,7 +128,7 @@ class Attacker:
                 target_tokens = processor.batch_decode(item["targets"], skip_special_tokens=True)
                 inputs = self.get_adv_inputs(item["inputs"])
                 inputs = {k: v.to("cuda") for k, v in inputs.items()}
-                output = model.generate(**inputs, max_new_tokens=10)
+                output = model.generate(**inputs, max_new_tokens=30)
                 pred = processor.batch_decode(output[:, inputs["input_ids"].shape[-1] :], skip_special_tokens=True)
             # asr += (pred == targets).sum().item()
             preds += pred

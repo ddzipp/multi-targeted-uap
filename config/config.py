@@ -22,7 +22,7 @@ class Config:
     targets: dict | None = None
     sample_id: list | None = None
     # model info
-    model_name: str = "Qwen2_5"  # renset50, Llava, Qwen2_5
+    model_name: str = "Llava"  # renset50, Llava, Qwen2_5
 
     # attack info
     attack_name: str = "base"  # base, split, union_split

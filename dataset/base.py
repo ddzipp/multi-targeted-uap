@@ -12,16 +12,18 @@ class VisionData(TypedDict):
 
 
 class AttackDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset, targets: dict | None = None, processor=None, eval=False):
+    def __init__(self, dataset, targets: dict[str] | None = None, processor=None, eval=False):
         self.dataset = dataset
-        self.target_dict = targets if targets is not None else {}
+        self.target_dict = targets.copy() if targets is not None else {}
         self.processor = processor
         self.eval = eval
         # calc fixed target tokens for target_dict, which map original label to target label
-        if self.processor is not None and not self.eval:
+        if self.processor is not None:
             self.tokenizer = self.processor.tokenizer
             self.eos_token_ids = self.tokenizer.eos_token_ids
             for original, target in self.target_dict.items():
+                if not isinstance(target, str):
+                    continue
                 target_ids = self.tokenizer(target, add_special_tokens=False).input_ids
                 self.target_dict[original] = target_ids + [self.eos_token_ids]
             # pad target_dict values to max length
