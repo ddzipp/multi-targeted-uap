@@ -85,8 +85,9 @@ class Attacker:
             loss_fn = torch.nn.CrossEntropyLoss()
             ce_loss = loss_fn(logits.view(-1, logits.shape[-1]), targets.view(-1))
             # sum confidence of negative targets
-            prob = logits.softmax(dim=-1)
-            neg_loss = 0
+            # prob = logits.softmax(dim=-1)
+            prob = logits
+            re_loss = 0
             margin = 0.2
             for key, val in target_dict.items():
                 neg_mask = [i != key for i in labels]
@@ -97,14 +98,14 @@ class Attacker:
                 anchor_prob = prob_mask[torch.arange(prob_mask.shape[0]), targets[neg_mask].view(-1)]
                 neg_prob = prob_mask[torch.arange(prob_mask.shape[0]), val * sum(neg_mask)]
                 margin_loss = (neg_prob - anchor_prob + margin).clip(min=0).mean()
-                neg_loss += margin_loss
-            neg_loss = neg_loss / len(target_dict)
+                re_loss += margin_loss
+            re_loss = re_loss / len(target_dict)
             # total loss
-            loss = ce_loss + neg_loss
+            loss = ce_loss + re_loss
             # record ce_loss and neg_loss for logging
             nonlocal total_ce_loss, total_neg_loss
             total_ce_loss += ce_loss.item()
-            total_neg_loss += neg_loss.item()
+            total_neg_loss += re_loss.item()
             return loss
 
         for item in dataloader:
@@ -120,7 +121,7 @@ class Attacker:
         return {
             "loss": total_loss / len(dataloader),
             "ce_loss": total_ce_loss / len(dataloader),
-            "neg_loss": total_neg_loss / len(dataloader),
+            "margin_loss": total_neg_loss / len(dataloader),
         }
 
     @torch.no_grad()

@@ -65,8 +65,8 @@ def set_target_sample(cfg: Config, resume_id=None):
 def main():
     # init
     cfg = Config()
-    set_target_sample(cfg, "lichangyue/ImageNet-VLM-MarginLoss/rofx0ve0")
-    run = WBLogger(project="ImageNet-VLM-MarginLoss", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}-10*LR").run
+    set_target_sample(cfg)
+    run = WBLogger(project="ImageNet-VLM-MarginLoss", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
     # cfg.epoch = 10
     model = get_model(cfg.model_name)
     dataloader = get_dataloader(
