@@ -22,7 +22,7 @@ class Config:
     targets: dict | None = None
     sample_id: list | None = None
     # model info
-    model_name: str = "Llava"  # renset50, Llava, Qwen2_5
+    model_name: str = "Qwen2_5"  # renset50, Llava, Qwen2_5
 
     # attack info
     attack_name: str = "base"  # base, split, union_split
@@ -35,6 +35,7 @@ class Config:
     patch_size: tuple[int, int] = (40, 40)
     patch_location: tuple[int, int] = (0, 0)
     on_normalized: bool = True
+    save_dir: str = f"./save/Margin/{model_name}_T{num_targets}"
 
     def asdict(self):
         return asdict(self)

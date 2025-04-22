@@ -22,7 +22,8 @@ class Attacker:
         super().__init__()
         self.model = model
         self.constraint = constraint
-        self.lr = lr
+        self.base_lr = lr
+        self.lr = lr * 10
         self.momentum = momentum
         self.on_normalized = on_normalized
         self.bound = bound
@@ -84,15 +85,19 @@ class Attacker:
             loss_fn = torch.nn.CrossEntropyLoss()
             ce_loss = loss_fn(logits.view(-1, logits.shape[-1]), targets.view(-1))
             # sum confidence of negative targets
+            prob = logits.softmax(dim=-1)
             neg_loss = 0
+            margin = 0.2
             for key, val in target_dict.items():
                 neg_mask = [i != key for i in labels]
                 # if all labels are positive, skip this target
                 if not any(neg_mask):
                     continue
-                prob = logits[neg_mask].softmax(dim=-1).view(-1, logits.shape[-1])
-                neg_prob = prob[torch.arange(prob.shape[0]), val * sum(neg_mask)].mean()
-                neg_loss += neg_prob
+                prob_mask = prob[neg_mask].view(-1, logits.shape[-1])
+                anchor_prob = prob_mask[torch.arange(prob_mask.shape[0]), targets[neg_mask].view(-1)]
+                neg_prob = prob_mask[torch.arange(prob_mask.shape[0]), val * sum(neg_mask)]
+                margin_loss = (neg_prob - anchor_prob + margin).clip(min=0).mean()
+                neg_loss += margin_loss
             neg_loss = neg_loss / len(target_dict)
             # total loss
             loss = ce_loss + neg_loss

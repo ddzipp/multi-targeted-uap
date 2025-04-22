@@ -13,7 +13,7 @@ from dataset import AttackDataset, collate_fn, load_dataset
 from models import get_model, model_hub
 from utils.logger import WBLogger
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 torch.manual_seed(42)
 
 
@@ -65,9 +65,9 @@ def set_target_sample(cfg: Config, resume_id=None):
 def main():
     # init
     cfg = Config()
-    set_target_sample(cfg, resume_id="lichangyue/ImageNet-VLM-Eval/41r0jc5s")
-    run = WBLogger(project="ImageNet-VLM-Regularization", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
-
+    set_target_sample(cfg, "lichangyue/ImageNet-VLM-MarginLoss/rofx0ve0")
+    run = WBLogger(project="ImageNet-VLM-MarginLoss", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}-10*LR").run
+    # cfg.epoch = 10
     model = get_model(cfg.model_name)
     dataloader = get_dataloader(
         cfg.dataset_name,
@@ -77,9 +77,9 @@ def main():
         batch_size=cfg.batch_size,
         processor=model.processor,
     )
-    save_dir = f"./save/regularization/{cfg.model_name}_T{cfg.num_targets}"
+    cfg.save_dir = f"./save/Margin/{cfg.model_name}_T{cfg.num_targets}"
     attacker = get_attacker(cfg, model)
-    attacker.pert = torch.load(f"./save/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth")["perturbation"]
+    # attacker.pert = torch.load(f"./save/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth")["perturbation"]
     # TODO: Accelerator is not supported in current version
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)
@@ -91,14 +91,15 @@ def main():
                 loss = attacker.trainer(dataloader)
                 run.log(loss)
                 pbar.set_postfix({"loss": f"{loss['loss']:.2f}"})
-                attacker.saver(filename := f"{save_dir}/{str(i)}.pth")
+                attacker.saver(filename := f"{cfg.save_dir}/{str(i)}.pth")
+                attacker.lr = max(attacker.lr * 0.9, attacker.base_lr)
                 if i % 10 == 0:
                     run.save(filename)
                 # if loss < 0.1:
                 #     break
     finally:
         # save perturbation and mask
-        attacker.saver(filename := f"{save_dir}/perturbation.pth")
+        attacker.saver(filename := f"{cfg.save_dir}/perturbation.pth")
         run.save(filename)
         run.finish()
 

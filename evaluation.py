@@ -14,13 +14,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/ImageNet-VLM-Eval/41r0jc5s"
+run_path = "lichangyue/ImageNet-VLM-ReLoss/yp7c1pjy"
 run = api.run(run_path)
 config = run.config
 cfg = Config()
 cfg.__dict__.update(config)
 
-file_name = f"./save/{cfg.model_name}_T{cfg.num_targets}/499.pth"
+file_name = f"./save/Margin/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth"
 result_path = file_name.replace(".pth", "_evaluation.pth")
 
 
@@ -98,7 +98,7 @@ train_asr = calc_asr(train_preds, train_targets)
 contain = [train_targets[i] in train_preds[i] for i in range(len(train_targets))]
 print("Contain Rate", np.mean(contain))
 test_asr = calc_asr(test_preds, test_targets)
-contain = [test_targets[i] in test_preds[i] for i in range(len(test_asr))]
+contain = [test_targets[i] in test_preds[i] for i in range(len(test_preds))]
 print("Contain Rate", np.mean(contain))
 if "perturbation.pth" in file_name:
     run.summary.update({"Train_ASR": train_asr, "Test_ASR": test_asr})
