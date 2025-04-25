@@ -10,11 +10,11 @@ from config import Config
 from demo import get_dataloader
 from models import get_model
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/ImageNet-VLM-ReLoss/yp7c1pjy"
+run_path = "lichangyue/ImageNet-VLM-MarginLoss/ho21tqmu"
 run = api.run(run_path)
 config = run.config
 cfg = Config()

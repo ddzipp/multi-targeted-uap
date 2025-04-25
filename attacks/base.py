@@ -22,14 +22,14 @@ class Attacker:
         super().__init__()
         self.model = model
         self.constraint = constraint
-        self.base_lr = lr
-        self.lr = lr * 10
+        self.lr = lr
         self.momentum = momentum
         self.on_normalized = on_normalized
         self.bound = bound
         self.ref_shape = (1, 3, ref_size, ref_size)
         self.pert = self.__init_pert__()
         self.velocity = torch.zeros_like(self.pert)
+        self.alpha = 1
 
     def __init_pert__(self):
         self.pert = torch.rand(self.ref_shape)
@@ -88,7 +88,7 @@ class Attacker:
             # prob = logits.softmax(dim=-1)
             prob = logits
             re_loss = 0
-            margin = 0.2
+            margin = 0.1
             for key, val in target_dict.items():
                 neg_mask = [i != key for i in labels]
                 # if all labels are positive, skip this target
@@ -101,7 +101,7 @@ class Attacker:
                 re_loss += margin_loss
             re_loss = re_loss / len(target_dict)
             # total loss
-            loss = ce_loss + re_loss
+            loss = ce_loss + self.alpha * re_loss
             # record ce_loss and neg_loss for logging
             nonlocal total_ce_loss, total_neg_loss
             total_ce_loss += ce_loss.item()
