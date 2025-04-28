@@ -100,7 +100,10 @@ class Constraint:
         # Make a copy of the image to avoid modifying the original
         perturbed_image = image.clone()
         # Apply the perturbation only to the frame area
-        perturbed_image = perturbed_image * (1 - _mask) + perturb * _mask
+        if self.mode == 'pixel':
+            perturbed_image = image + perturb
+        else:
+            perturbed_image = perturbed_image * (1 - _mask) + perturb * _mask
         return perturbed_image
 
     def __call__(self, image, perturbation):

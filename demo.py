@@ -13,19 +13,22 @@ from dataset import AttackDataset, collate_fn, load_dataset
 from models import get_model, model_hub
 from utils.logger import WBLogger
 
-i = 2
+i = 1
 os.environ["CUDA_VISIBLE_DEVICES"] = f"{i*2}, {i*2+1}"
 torch.manual_seed(42)
 
 
 def set_target_sample(cfg: Config, resume_id=None):
+    resume_id = "lichangyue/VLM-Eval/l53r3pkb"
     if resume_id is not None:
         api = wandb.Api()
         run = api.run(resume_id)
         config = run.config
         cfg.__dict__.update(config)
-        # cfg.model_name = "Llava"
-        # cfg.save_dir = f"./save/VLM/Margin/{cfg.model_name}_T{cfg.num_targets}"
+        cfg.attack_mode = "pixel"
+        cfg.epsilon = (-32/255, 32/255)
+        cfg.model_name = "Llava"
+        cfg.save_dir = f"./save/VLM/Margin/{cfg.attack_mode}/{cfg.model_name}_T{cfg.num_targets}"
         return cfg
 
     if cfg.dataset_name == "ImageNet":
@@ -42,7 +45,7 @@ def set_target_sample(cfg: Config, resume_id=None):
             with open("./data/ImageNet/idx2class.json", "r") as f:
                 idx2class = json.load(f)
             for key, value in cfg.targets.items():
-                cfg.targets[key] = idx2class[str(value)].split(",")[0].strip()
+                cfg.targets[key] = idx2class[str(value)].split(",")[0].strip().split(" ")[0].strip()
         return cfg
 
 
@@ -69,7 +72,7 @@ def main():
     # init
     cfg = Config()
     set_target_sample(cfg)
-    run = WBLogger(project="VLM-Eval", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}").run
+    # run = WBLogger(project="VLM-Eval", config=cfg, name=f"{cfg.model_name}_T{cfg.num_targets}_{cfg.attack_mode}").run
     model = get_model(cfg.model_name)
     dataloader = get_dataloader(
         cfg.dataset_name,
@@ -80,7 +83,7 @@ def main():
         processor=model.processor,
     )
     attacker = get_attacker(cfg, model)
-    # attacker.pert = torch.load(f"./save/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth")["perturbation"]
+    # attacker.pert = torch.load(f"{cfg.save_dir}/perturbation.pth")["perturbation"]
     # TODO: Accelerator is not supported in current version
     # accelerator = Accelerator()
     # model, dataloader = accelerator.prepare(model, dataloader)

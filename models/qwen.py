@@ -1,5 +1,6 @@
 import torch
 from PIL.Image import Image
+import torchvision
 
 from models.base import RegisterModel, VisualLanguageModel
 
@@ -20,14 +21,14 @@ class Qwen2(VisualLanguageModel):
         self.image_processor = self.processor.image_processor
         self.device = "cuda" if device == "auto" else device
 
-    def image_encode(self, image: Image | torch.Tensor):
-        processed_image = self.processor.image_processor(image, return_tensors="pt").to(self.device)
-        emb = self.model.vision_model(
-            processed_image["pixel_values"],
-            processed_image["aspect_ratio_ids"],
-            processed_image["aspect_ratio_mask"],
-        )
-        return emb.last_hidden_state
+    def image_preprocess(self, image, do_normalize=True):
+        hight, width = 308, 308
+        resize = torchvision.transforms.Resize((hight, width))
+        image = resize(image)
+        return self.processor.image_processor(image, return_tensors="pt", do_resize=False, do_rescale=False, do_normalize=do_normalize)[
+            "pixel_values"
+        ]
+
 
     @property
     def processor(self):

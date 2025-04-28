@@ -17,7 +17,7 @@ class Config:
     dataset_name: str = "ImageNet"
     split: str = "train"
     batch_size: int = 4
-    num_targets: int = 5
+    num_targets: int = 3
     train_size: int = 50
     targets: dict | None = None
     sample_id: list | None = None
@@ -26,16 +26,16 @@ class Config:
 
     # attack info
     attack_name: str = "base"  # base, split, union_split
-    lr: float = 0.01 * batch_size
-    epoch: int = 300
-    attack_mode: str = "frame"
+    lr: float = 0.01
+    epoch: int = 500
+    attack_mode: str = "frame" # frame, corner, pixel
     bound: tuple = (0, 1)
-    # bound: tuple = (-16 / 255, 16 / 255)
+    epsilon: tuple = (-32 / 255, 32 / 255)
     frame_width: int = 6
-    patch_size: tuple[int, int] = (40, 40)
+    patch_size: tuple[int, int] = (20, 20)
     patch_location: tuple[int, int] = (0, 0)
     on_normalized: bool = True
-    save_dir: str = f"./save/VLM/Margin/{model_name}_T{num_targets}"
+    save_dir: str = f"./save/VLM/Margin/{attack_mode}/{model_name}_T{num_targets}"
 
     def asdict(self):
         return asdict(self)

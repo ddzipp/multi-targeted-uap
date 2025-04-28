@@ -13,11 +13,12 @@ class Attacker:
         self,
         model: Model,
         constraint: Constraint,
-        lr=0.1,
-        on_normalized=True,  # add noise on normalized pixel_values
-        momentum=0.9,
+        lr:float=0.01,
+        on_normalized:bool=True,  # add noise on normalized pixel_values
+        momentum:float=0.9,
         bound: tuple = (0, 1),
-        ref_size=299,
+        epsilon: tuple = (0, 1),
+        ref_size:int=299,
     ):
         super().__init__()
         self.model = model
@@ -25,13 +26,10 @@ class Attacker:
         self.lr = lr
         self.momentum = momentum
         self.on_normalized = on_normalized
-        self.bound = bound
+        self.bound = self.pert_bound = bound
+        self.epsilon = epsilon
         self.ref_shape = (1, 3, ref_size, ref_size)
-        self.pert = self.__init_pert__()
-        self.velocity = torch.zeros_like(self.pert)
         self.alpha = 1
-
-    def __init_pert__(self):
         self.pert = torch.rand(self.ref_shape)
         mask = self.constraint.get_mask(self.ref_shape)
         if self.on_normalized:
@@ -41,21 +39,26 @@ class Attacker:
                 self.constraint.get_mask(self.pert.shape)
             else:  # let the mask go through the same image_preprocess
                 self.constraint._mask = self.model.image_preprocess(mask, False)
-            # init clip bound for normalized pixel_values
-            lower, upper = self.bound
+            self.bound = self.__init_bound__(bound)
+            self.pert_bound = self.__init_bound__(epsilon)
+        self.velocity = torch.zeros_like(self.pert)
+
+
+    def __init_bound__(self, bound):
+            lower, upper = bound
             min_values = lower * torch.ones(self.ref_shape)
             max_values = upper * torch.ones(self.ref_shape)
             min_values = self.model.image_preprocess(min_values)
             max_values = self.model.image_preprocess(max_values)
-            self.bound = (min_values, max_values)
-        return self.pert
+            bound = (min_values, max_values)
+            return bound
 
-    def clip_image(self, image: torch.Tensor):
+    def clip_image(self, image: torch.Tensor, bound):
         batch = image.shape[0] // self.pert.shape[0]
         if not self.on_normalized:
-            return torch.clip(image, *self.bound)
+            return torch.clip(image, *bound)
         else:
-            lower, upper = self.bound
+            lower, upper = bound
             lower = lower.repeat((batch,) + (1,) * (image.ndim - 1))
             upper = upper.repeat((batch,) + (1,) * (image.ndim - 1))
             return torch.clip(image, lower, upper)
@@ -66,13 +69,13 @@ class Attacker:
             inputs["pixel_values"] = self.constraint(inputs["pixel_values"], self.pert)
         else:
             raise NotImplementedError("Only on_normalized is supported")
-        inputs["pixel_values"] = self.clip_image(inputs["pixel_values"])
+        inputs["pixel_values"] = self.clip_image(inputs["pixel_values"], self.bound)
         return inputs
 
     def step(self, grad):
         self.velocity = self.momentum * self.velocity + grad / torch.norm(grad, p=1)
         self.pert = self.pert - self.lr * self.velocity.sign()
-        self.pert = self.clip_image(self.pert)
+        self.pert = self.clip_image(self.pert, self.pert_bound)
 
     def trainer(self, dataloader) -> float:
         total_loss = 0

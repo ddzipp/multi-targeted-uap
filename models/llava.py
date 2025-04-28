@@ -1,3 +1,4 @@
+import torchvision
 from models.base import RegisterModel, VisualLanguageModel
 
 
@@ -64,3 +65,11 @@ class LLavaNext(VisualLanguageModel):
     @property
     def model(self):
         return self._model
+
+    def image_preprocess(self, image, do_normalize=True):
+        hight, width = 336,336
+        resize = torchvision.transforms.Resize((hight, width))
+        image = resize(image)
+        return self.processor.image_processor(image, return_tensors="pt", do_resize=False, do_rescale=False, do_normalize=do_normalize)[
+            "pixel_values"
+        ]

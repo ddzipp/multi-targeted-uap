@@ -10,17 +10,18 @@ from config import Config
 from demo import get_dataloader
 from models import get_model
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # Online
 api = wandb.Api()
-run_path = "lichangyue/ImageNet-VLM-MarginLoss/ho21tqmu"
+run_path = "lichangyue/VLM-Eval/l53r3pkb"
 run = api.run(run_path)
 config = run.config
 cfg = Config()
 cfg.__dict__.update(config)
 
-file_name = f"./save/Margin/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth"
+# file_name = f"./save/Margin/{cfg.model_name}_T{cfg.num_targets}/perturbation.pth"
+file_name = cfg.save_dir + "/perturbation.pth"
 result_path = file_name.replace(".pth", "_evaluation.pth")
 
 
@@ -44,16 +45,12 @@ def evaluate(cfg: Config, perturbation):
 
 
 def calc_asr(preds, targets):
-    preds = np.array(preds)
-    targets = np.array(targets)
-    asr_targets = []
+    asr = [p.startswith(t) for p,t in zip(preds,targets)] 
     datasize = len(preds) // cfg.num_targets
+    asr_targets = []
     for i in range(cfg.num_targets):
-        left = i * datasize
-        right = (i + 1) * datasize
-        preds_i = preds[left:right]
-        targets_i = targets[left:right]
-        asr_targets.append((preds_i == targets_i).mean().item())
+        asr_per_label = asr[i * datasize : (i + 1) * datasize]
+        asr_targets.append(sum(asr_per_label) / len(asr_per_label))
     print("ASR for each target:", asr_targets)
     print(f"Average ASR: {np.mean(asr_targets):.4f}")
     return asr_targets
